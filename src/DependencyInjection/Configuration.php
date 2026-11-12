@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CodeConjure\SyliusGlsPlugin\DependencyInjection;
 
 use CodeConjure\Gls\Country;
+use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -59,6 +60,26 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('contact_name')->defaultNull()->end()
                         ->scalarNode('contact_phone')->defaultNull()->end()
                         ->scalarNode('contact_email')->defaultNull()->end()
+                    ->end()
+                ->end()
+                ->arrayNode('cod')
+                    ->info('Az utánvét szabályai GLS-szállítmánynál (#254).')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('payment_method_codes')
+                            ->info('A bolt utánvétes fizetési módjainak kódja.')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['cash_on_delivery'])
+                        ->end()
+                        ->integerNode('max_amount')
+                            ->info('A beszedhető összeg felső határa fillérben (a GLS maxCodAmount-ja: 500 000 Ft).')
+                            ->min(0)
+                            ->defaultValue(CodPolicy::DEFAULT_MAX_AMOUNT)
+                        ->end()
+                        ->booleanNode('international')
+                            ->info('Van-e utánvét külföldre — csak ha a GLS-szerződés adja (az ecsomag nem).')
+                            ->defaultFalse()
+                        ->end()
                     ->end()
                 ->end()
                 ->arrayNode('packaging')

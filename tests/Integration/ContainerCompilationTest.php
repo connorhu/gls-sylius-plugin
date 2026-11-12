@@ -7,8 +7,12 @@ namespace CodeConjure\SyliusGlsPlugin\Tests\Integration;
 use CodeConjure\Gls\Environment;
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
 use CodeConjure\SyliusGlsPlugin\Api\ApiMode;
+use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use CodeConjure\SyliusGlsPlugin\CodeConjureSyliusGlsPlugin;
 use CodeConjure\SyliusGlsPlugin\DependencyInjection\CodeConjureSyliusGlsExtension;
+use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
+use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Tests\Support\EmptyPaymentMethodsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -102,6 +106,39 @@ final class ContainerCompilationTest extends TestCase
     }
 
     /**
+     * Az utánvét-szűrő a KONKRÉT `sylius.resolver.payment_methods` id-t
+     * dekorálja. Az interfész-alias dekorálása csak az aliast irányítaná át,
+     * a Sylius fogyasztói (pénztár-űrlap, Twig, API) viszont az id-t kapják —
+     * a szűrő az ő útjukon kimaradna.
+     */
+    public function testTheCodFilterDecoratesTheConcretePaymentMethodsResolverId(): void
+    {
+        $definition = $this->builder([])->getDefinition(CodPaymentMethodsResolver::class);
+
+        self::assertSame('sylius.resolver.payment_methods', $definition->getDecoratedService()[0] ?? null);
+    }
+
+    public function testTheCodPolicyIsConfigurable(): void
+    {
+        $container = $this->dumpedContainer(['cod' => ['payment_method_codes' => ['utanvet'], 'max_amount' => 100, 'international' => true]]);
+
+        self::assertSame(['utanvet'], $container->getParameter('codeconjure_gls.cod.payment_method_codes'));
+        self::assertSame(100, $container->getParameter('codeconjure_gls.cod.max_amount'));
+        self::assertTrue($container->getParameter('codeconjure_gls.cod.international'));
+        self::assertInstanceOf(CodPolicy::class, $container->get(CodPolicy::class));
+        self::assertInstanceOf(EligibilityChecker::class, $container->get(EligibilityChecker::class));
+    }
+
+    public function testTheCodPolicyDefaultsToTheGlsLimitsAndNoCodAbroad(): void
+    {
+        $container = $this->dumpedContainer([]);
+
+        self::assertSame(['cash_on_delivery'], $container->getParameter('codeconjure_gls.cod.payment_method_codes'));
+        self::assertSame(50_000_000, $container->getParameter('codeconjure_gls.cod.max_amount'));
+        self::assertFalse($container->getParameter('codeconjure_gls.cod.international'));
+    }
+
+    /**
      * A `Client` szándékosan NEM service: kézi módban a példányosítása
      * dobna, és vele minden rá függő service. Az API-t hívók az
      * `ApiAccess`-t kérik.
@@ -159,6 +196,9 @@ final class ContainerCompilationTest extends TestCase
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', sys_get_temp_dir());
+
+        // A dekorált Sylius-resolver a HOST-ban él; itt egy helyettes áll a helyén.
+        $container->register(CodPaymentMethodsResolver::DECORATED_SERVICE, EmptyPaymentMethodsResolver::class);
 
         (new CodeConjureSyliusGlsExtension())->load([$config], $container);
 

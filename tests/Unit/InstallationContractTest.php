@@ -31,7 +31,7 @@ final class InstallationContractTest extends TestCase
         preg_match_all("/->arrayNode\\('([a-z_]+)'\\)/", self::read('src/DependencyInjection/Configuration.php'), $matches);
 
         foreach ($matches[1] as $section) {
-            self::assertMatchesRegularExpression('/^    ' . preg_quote($section, '/') . ':$/m', self::doc(), \sprintf('A `%s` konfigurációs szakasz nincs dokumentálva.', $section));
+            self::assertMatchesRegularExpression('/^ +' . preg_quote($section, '/') . ':/m', self::doc(), \sprintf('A `%s` konfigurációs szakasz nincs dokumentálva.', $section));
         }
     }
 

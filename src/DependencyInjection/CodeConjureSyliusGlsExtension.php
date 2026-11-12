@@ -37,6 +37,26 @@ final class CodeConjureSyliusGlsExtension extends Extension implements PrependEx
 
         $container->setParameter('codeconjure_gls.pickup_address', self::section($config, 'pickup_address'));
 
+        $cod = $config['cod'] ?? null;
+
+        if (!\is_array($cod) || !\is_array($cod['payment_method_codes'] ?? null) || !\is_int($cod['max_amount'] ?? null) || !\is_bool($cod['international'] ?? null)) {
+            throw new \LogicException('A `codeconjure_gls.cod` konfigurációs szakasz hiányos.');
+        }
+
+        $codes = [];
+
+        foreach ($cod['payment_method_codes'] as $code) {
+            if (!\is_string($code)) {
+                throw new \LogicException('A `codeconjure_gls.cod.payment_method_codes` csak kódokat (stringeket) tartalmazhat.');
+            }
+
+            $codes[] = $code;
+        }
+
+        $container->setParameter('codeconjure_gls.cod.payment_method_codes', $codes);
+        $container->setParameter('codeconjure_gls.cod.max_amount', $cod['max_amount']);
+        $container->setParameter('codeconjure_gls.cod.international', $cod['international']);
+
         foreach (self::section($config, 'packaging') as $key => $value) {
             $container->setParameter('codeconjure_gls.packaging.' . $key, $value);
         }

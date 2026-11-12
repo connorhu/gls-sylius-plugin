@@ -19,10 +19,13 @@ A mód futásidőben dől el az env-változókból (`GLS_USERNAME`, `GLS_PASSWOR
 
 ## Állapot
 
-A `0.1` a plugin **váza**: konfiguráció, az API-mód eldöntése
-(`Api\ApiAccess`), Monolog-csatorna, migrációs névtér, fordítási névtér
-(`codeconjure.gls.*`), CI. Az üzleti funkciók (szállítási fajták, pénztár,
-díj, feladás, nyomkövetés) a következő kiadásokban jönnek.
+- `0.1`: a váz — konfiguráció, az API-mód eldöntése (`Api\ApiAccess`),
+  Monolog-csatorna, migrációs és fordítási névtér, CI.
+- `0.2`: a három GLS szállítási fajta, a host-szerződés interfészei, az
+  utánvét-szabály (pénztári szűrő is) és a feladás előtti ellenőrzés.
+
+A pénztári csomagpont-választó, a díj, a feladás és a nyomkövetés a
+következő kiadásokban jön.
 
 ## Fejlesztés
 
