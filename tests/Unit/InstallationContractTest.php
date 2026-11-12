@@ -100,6 +100,13 @@ final class InstallationContractTest extends TestCase
         self::assertStringContainsString("resource: '@CodeConjureSyliusGlsPlugin/src/Resources/config/routes.yaml'", self::doc());
     }
 
+    /** A szinkront senki nem futtatja, ha az ütemezése nincs leírva (FoxPost #213). */
+    public function testTheTrackingSyncScheduleIsDocumented(): void
+    {
+        self::assertStringContainsString('bin/console ' . \CodeConjure\SyliusGlsPlugin\Command\GlsTrackingSyncCommand::NAME, self::doc());
+        self::assertStringContainsString('flock -n', self::doc());
+    }
+
     private static function doc(): string
     {
         return self::read('docs/installation.md');

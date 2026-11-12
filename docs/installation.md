@@ -272,6 +272,28 @@ szám) / `HouseNumberInfo` hármast vár: a plugin `Address\StreetSplitter`-e bo
 („Petőfi tér 5. 2. em. 4." → `Petőfi tér` / `5` / `2. em. 4.`). Ami nem bontható
 (nincs házszám, helyrajzi szám), a teljes sorral, házszám nélkül megy.
 
+## 10. Nyomkövetés-szinkron
+
+A `gls:tracking:sync` parancs a nyitott csomagok (kinyomtatott címke, átadva,
+úton, sikertelen kézbesítés) státuszát kérdezi le 100-as kötegekben
+(`GetParcelListStatuses`), és a legfrissebb GLS-státuszkód szerint lépteti őket:
+kézbesítve, úton, sikertelen kézbesítés, visszaküldve. A nyers kód mindig
+eltárolódik (`GlsParcel::glsStatus`); az ismeretlen kód átmenet nélkül marad, és
+a `gls` csatornára naplózódik. Ha egy kinyomtatott címkéjű csomagot a GLS már
+szkennelt, a szinkron pótolja az „Átadva" lépést (a Sylius szállítmány `ship`).
+
+Webhook nincs: a parancsot **ütemezni kell**, különben a csomagok a feladás
+utáni állapotban maradnak. Cron-bejegyzés (`/etc/cron.d`, a felhasználó a `var`
+tulajdonosa):
+
+```cron
+*/30 * * * * www-data cd /var/www/bolt && flock -n var/cron-gls-tracking.lock php bin/console gls:tracking:sync --no-interaction >> var/log/cron.log 2>&1
+```
+
+A `flock -n` az átfedő futások ellen kell. API nélküli módban a parancs
+sikeresen, lekérdezés nélkül lép ki („the MyGLS API is not configured"), tehát
+a bejegyzés a hozzáférés előtt is a helyén lehet.
+
 ## API-t hívó kód a pluginban és a hostban
 
 A MyGLS `Client` szándékosan **nem service**. API nélküli módban a

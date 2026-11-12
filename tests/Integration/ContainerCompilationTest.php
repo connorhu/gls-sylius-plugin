@@ -247,6 +247,15 @@ final class ContainerCompilationTest extends TestCase
         self::assertSame([['event' => 'sylius.menu.admin.main']], $container->getDefinition(\CodeConjure\SyliusGlsPlugin\Menu\AdminMenuListener::class)->getTag('kernel.event_listener'));
     }
 
+    /** A nyomkövetés-szinkron (#258) parancsként regisztrált, a `gls` csatornára naplóz. */
+    public function testTheTrackingSyncIsACommand(): void
+    {
+        $container = $this->builder([]);
+
+        self::assertTrue($container->getDefinition(\CodeConjure\SyliusGlsPlugin\Command\GlsTrackingSyncCommand::class)->hasTag('console.command'));
+        self::assertSame([['channel' => 'gls']], $container->getDefinition(\CodeConjure\SyliusGlsPlugin\Tracking\GlsTrackingSyncService::class)->getTag('monolog.logger'));
+    }
+
     /** A workflow, a resource és a grid a megfelelő extensionnek megy. */
     public function testTheAdminConfigurationIsPrepended(): void
     {

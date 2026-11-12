@@ -6,6 +6,7 @@ use CodeConjure\SyliusGlsPlugin\Address\StreetSplitter;
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
 use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use CodeConjure\SyliusGlsPlugin\Cod\PickupPointCashCheck;
+use CodeConjure\SyliusGlsPlugin\Command\GlsTrackingSyncCommand;
 use CodeConjure\SyliusGlsPlugin\Controller\GlsParcelController;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
@@ -16,6 +17,7 @@ use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Pickup\PickupPointValidator;
 use CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository;
+use CodeConjure\SyliusGlsPlugin\Tracking\GlsTrackingSyncService;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -153,4 +155,21 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(AdminMenuListener::class)
         ->tag('kernel.event_listener', ['event' => 'sylius.menu.admin.main']);
+
+    // --- A nyomkövetés-szinkron (#258) ---
+
+    $services->set(GlsTrackingSyncService::class)
+        ->args([
+            service(ApiAccess::class),
+            service(GlsParcelRepository::class),
+            service('doctrine.orm.entity_manager'),
+            service('state_machine.gls_parcel'),
+            service(GlsParcelService::class),
+            service('logger')->nullOnInvalid(),
+        ])
+        ->tag('monolog.logger', ['channel' => 'gls']);
+
+    $services->set(GlsTrackingSyncCommand::class)
+        ->args([service(GlsTrackingSyncService::class)])
+        ->tag('console.command');
 };

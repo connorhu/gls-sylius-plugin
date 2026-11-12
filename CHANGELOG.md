@@ -7,6 +7,26 @@ visszafelé kompatibilisek.
 
 ## [Nem kiadott]
 
+## [0.5.0] – 2026-11-12
+
+A nyomkövetés-szinkron (bolt-issue #258).
+
+### Hozzáadva
+
+- `gls:tracking:sync` parancs és `Tracking\GlsTrackingSyncService`: a nyitott
+  csomagok státusza 100-as kötegekben (`GetParcelListStatuses`, magyar
+  nyelvű leírással), a legfrissebb státusz szerint léptetve; a nyers kód
+  eltárolva; a kinyomtatott, de át nem adott csomagot a GLS szkennelése
+  átadottá teszi (a Sylius szállítmány `ship`); API nélküli módban
+  lekérdezés nélkül, sikeresen lép ki.
+- `Tracking\GlsStatusMap` / `TrackingOutcome` — a G függelék kódjai: kézbesítve
+  (5, 54, 55, 58, 59, 92), visszaküldve (23, 40), sikertelen kézbesítés
+  (11–20, 33–36, 68), úton / ponton vár, még nincs a GLS-nél (51, 52); a többi
+  ismeretlen, átmenet nélkül.
+- `Tracking\GlsTrackingSyncSummary` — a záró napló és a konzol ugyanabból a
+  számlálókészletből (`found = synced + skipped + failed`).
+- `GlsParcelRepository::findForTracking()`.
+
 ## [0.4.0] – 2026-11-12
 
 Csomagfeladás, címke és sztornó az adminból, API-val és API nélkül
@@ -109,7 +129,8 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
-[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.4.0...main
+[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.5.0...main
+[0.5.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.5.0
 [0.4.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.4.0
 [0.3.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.3.0
 [0.2.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.2.0
