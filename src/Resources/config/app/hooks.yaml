@@ -1,0 +1,24 @@
+sylius_twig_hooks:
+    hooks:
+        # A pénztár: a GLS csomagpont- és automata-választója a közös
+        # codeconjure/sylius-carrier-bundle widget-hookján (#255). ÚJ név, a
+        # prepend() nyer. A mezőket, a szekciókat és a láthatóságot a közös
+        # csomag adja — a GLS csak a választó felületét.
+        'sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields':
+            gls:
+                template: '@CodeConjureSyliusGlsPlugin/shop/checkout/select_shipping/pickup_point_widget.html.twig'
+
+        # A választott pont a rendelés-összegzőben (a pénztár 4. lépése, a
+        # köszönőoldal, a fiók rendelés-részletezője). ÚJ név (a host
+        # sablonja hívja, a Sylius nem foglalja).
+        'sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point':
+            gls:
+                template: '@CodeConjureSyliusGlsPlugin/shop/order/summary_pickup_point.html.twig'
+
+        # Utánvét-figyelmeztetés a 3. lépés utánvét-kártyáján. A hook a
+        # Syliusé, de a KULCS új — a prepend() így hozzáad, nem ír felül.
+        # Prioritás: a vendor `description` (0) után.
+        'sylius_shop.shared.form.select_payment.payment.choice.details':
+            gls_cod_notice:
+                template: '@CodeConjureSyliusGlsPlugin/shop/checkout/select_payment/cod_notice.html.twig'
+                priority: -10

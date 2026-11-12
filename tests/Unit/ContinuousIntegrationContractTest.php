@@ -32,6 +32,8 @@ final class ContinuousIntegrationContractTest extends TestCase
         'phpunit.xml.dist' => 'vendor/bin/phpunit',
         'phpstan.dist.neon' => 'vendor/bin/phpstan',
         'ecs.php' => 'vendor/bin/ecs',
+        // A Stimulus controller vitest-tesztjei (#255).
+        'assets/vitest.config.js' => 'npm test',
     ];
 
     public function testTheWorkflowFileExists(): void

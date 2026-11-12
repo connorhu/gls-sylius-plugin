@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CodeConjure\SyliusGlsPlugin\Tests\Unit\Model;
 
 use CodeConjure\SyliusGlsPlugin\Model\GlsDeliveryKind;
+use CodeConjure\SyliusGlsPlugin\Tests\Support\GlsShipment;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\GlsShippingMethod;
 use PHPUnit\Framework\TestCase;
+use Sylius\Component\Core\Model\Shipment;
 use Sylius\Component\Core\Model\ShippingMethod;
 
 /**
@@ -50,6 +52,17 @@ final class GlsDeliveryKindTest extends TestCase
         self::assertSame(2, GlsDeliveryKind::ParcelLocker->deliveryPointType());
     }
 
+    /**
+     * A térkép-widget (`<gls-dpm-dialog filter-type="…">`) és a nyilvános
+     * pontlista `type` mezője ugyanezt a két értéket beszéli.
+     */
+    public function testTheMapFilterTypeMatchesTheWidgetAndThePointList(): void
+    {
+        self::assertNull(GlsDeliveryKind::HomeDelivery->mapFilterType());
+        self::assertSame('parcel-shop', GlsDeliveryKind::ParcelShop->mapFilterType());
+        self::assertSame('parcel-locker', GlsDeliveryKind::ParcelLocker->mapFilterType());
+    }
+
     public function testItResolvesFromAGlsShippingMethod(): void
     {
         self::assertSame(GlsDeliveryKind::ParcelShop, GlsDeliveryKind::fromShippingMethod(new GlsShippingMethod('gls_parcel_shop')));
@@ -61,5 +74,18 @@ final class GlsDeliveryKindTest extends TestCase
         self::assertNull(GlsDeliveryKind::fromShippingMethod(new GlsShippingMethod(null)));
         self::assertNull(GlsDeliveryKind::fromShippingMethod(new ShippingMethod()));
         self::assertNull(GlsDeliveryKind::fromShippingMethod(null));
+    }
+
+    /**
+     * Egy leadott rendelés szállítmánya a SAJÁT fajtáját mondja (a host a
+     * mód választásakor pillanatképet tesz el) — az összegző ebből dolgozik,
+     * nem a mód mostani beállításából.
+     */
+    public function testItResolvesFromAGlsShipment(): void
+    {
+        self::assertSame(GlsDeliveryKind::ParcelLocker, GlsDeliveryKind::fromShipment(new GlsShipment(new GlsShippingMethod('gls_parcel_locker'))));
+        self::assertNull(GlsDeliveryKind::fromShipment(new GlsShipment(new GlsShippingMethod('foxpost_parcel_locker'))));
+        self::assertNull(GlsDeliveryKind::fromShipment(new Shipment()));
+        self::assertNull(GlsDeliveryKind::fromShipment(null));
     }
 }

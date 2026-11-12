@@ -1,0 +1,28 @@
+{# A GLS átvételi pont a rendelés-összegző szállítási blokkjában (#255).
+
+   A host sablonja szolgáltatófüggetlen kérdést tesz fel (a szállítmány
+   átvételi pontos-e), és a megjelenítést a
+   `sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point`
+   hookra bízza; ezt a nevet a Sylius nem foglalja, a plugin `prepend()`-je
+   host-lépés nélkül ráül.
+
+   A fajtát a SZÁLLÍTMÁNY mondja (a host pillanatképe), nem a mód mostani
+   beállítása. A `gls_handles_delivery()` a szűkítés: egy másik szállító
+   pontja ugyanerre a hookra ül, és nem a GLS dolga. Elérhetetlen
+   pontlistánál az azonosító látszik — a vevőnek és a boltnak akkor is
+   tudnia kell, hová megy a csomag. #}
+{% set shipment = hookable_metadata.context.shipment %}
+
+{% if gls_handles_delivery(shipment) and shipment.pickupPointId is not empty %}
+    {% set point = gls_pickup_point(shipment.pickupPointId) %}
+    {% set key = gls_delivery_kind(shipment) == 'gls_parcel_locker' ? 'locker' : 'shop' %}
+    <span class="gls-pickup-point-summary" data-test-gls-pickup-point="{{ shipment.pickupPointId }}">
+        {{- ('codeconjure.gls.pickup_point.' ~ key ~ '.title')|trans }}: <br>
+        {%- if point is not null %}
+            {{ point.name }}<br>
+            {{ point.addressLine }}
+        {%- else %}
+            {{ shipment.pickupPointId }}
+        {%- endif -%}
+    </span>
+{% endif %}

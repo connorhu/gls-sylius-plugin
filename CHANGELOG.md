@@ -7,6 +7,34 @@ visszafelé kompatibilisek.
 
 ## [Nem kiadott]
 
+## [0.3.0] – 2026-11-12
+
+A csomagpont- és csomagautomata-választó a pénztárban, és a választott pont
+megjelenítése (bolt-issue #255).
+
+### Hozzáadva
+
+- A pénztár választója a GLS térkép-widgetjével (`<gls-dpm-dialog>`),
+  fajtánként külön, a fajtára szűrt blokkban, a közös szállító-csomag
+  widget-hookján; a `gls-pickup-point` Stimulus controller a
+  `carrier:pickup-point-selected` eseménnyel adja át a pontot.
+- `Pickup\DeliveryPointCatalog` — a GLS nyilvános pontlistája, gyorsítótárazva;
+  `Pickup\DeliveryPoint`.
+- `Pickup\PickupPointValidator` és a pénztár `ShipmentType`-kiterjesztése:
+  ismeretlen vagy másik fajtájú pontnál a `pickupPointId` mező hibát kap.
+- `Cod\PickupPointCashCheck` — utánvétnél csak kártyával lehet-e fizetni a
+  ponton; figyelmeztetés a választóban és a 3. lépés utánvét-kártyáján.
+- A választott pont a rendelés-összegzőben
+  (`…addresses.shipping.pickup_point` hook).
+- `GlsDeliveryKind::mapFilterType()`, `fromShipment()`, `of()`.
+- Twig: `gls_pickup_point()`, `gls_cod_card_only()`,
+  `gls_is_cash_on_delivery()`, `gls_map_widget_url()`, `gls_map_country()`.
+
+### Változott
+
+- A `gls_handles_delivery()` és a `gls_delivery_kind()` a szállítmányt is
+  elfogadja (a fajta pillanatképéből).
+
 ## [0.2.0] – 2026-11-12
 
 A GLS szállítási fajták, az utánvét-szabály és a feladás előtti
@@ -46,6 +74,7 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
-[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.2.0...main
+[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.3.0...main
+[0.3.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.3.0
 [0.2.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.2.0
 [0.1.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.1.0

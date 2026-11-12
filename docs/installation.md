@@ -131,6 +131,78 @@ A hostnak nincs vele teendője:
 bin/console doctrine:migrations:migrate
 ```
 
+## 8. Csomagpont-választó a pénztárban
+
+A GLS csomagpont- és csomagautomata-választója a GLS saját térkép-widgetje
+(`<gls-dpm-dialog>`, betöltő: `https://map.gls-hungary.com/widget/gls-dpm.js`),
+fajtánként külön blokkban, a fajtára szűrve. A közös szállító-csomag
+`carrier-shipment` hatókörében ül; a mezőt (`pickupPointId`) és a láthatóságot
+a közös csomag adja.
+
+### Stimulus controller
+
+A `composer require` után a Flex felveszi a `gls-pickup-point` controllert az
+`assets/controllers.json`-ba (a csomag `symfony-ux` kulcsszava miatt), és a
+`package.json`-ba a
+`"@codeconjure/gls-sylius-plugin": "file:vendor/codeconjure/gls-sylius-plugin/assets"`
+függőséget. Frissítésnél (`composer update`) ez NEM mindig történik meg —
+ellenőrizd, és ha hiányzik, vedd fel kézzel:
+
+```json
+"@codeconjure/gls-sylius-plugin": {
+    "gls-pickup-point": { "enabled": true, "fetch": "eager" }
+}
+```
+
+Utána: `npm install && npm run build`.
+
+### Hookok
+
+A plugin `prepend()`-je mindet host-lépés nélkül beveszi (mind új kulcs); a
+host a sablont vagy a prioritást a saját `sylius_twig_hooks` configjában
+felülírhatja, vagy `enabled: false`-szal kikapcsolhatja.
+
+| Hook | Hookable | Mit rajzol |
+|---|---|---|
+| `sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields` | `gls` | a választó (2. lépés) |
+| `sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point` | `gls` | a választott pont a rendelés-összegzőben |
+| `sylius_shop.shared.form.select_payment.payment.choice.details` | `gls_cod_notice` | utánvét-figyelmeztetés a 3. lépés utánvét-kártyáján |
+
+Az összegző hookját (`…addresses.shipping.pickup_point`) a **host sablonja**
+hívja a szállítási blokkban, amikor a szállítmány átvételi pontos — ezt a
+FoxPost plugin is használja, egy boltban egyszer kell megírni.
+
+### A pontlista és az ellenőrzés
+
+A választott pont nevét, címét, fajtáját és azt, hogy fogad-e készpénzt, a
+plugin a GLS nyilvános pontlistájából olvassa
+(`https://map.gls-hungary.com/data/deliveryPoints/{ország}.json`, az ország a
+`codeconjure_gls.api.country`), a host `cache.app` gyorsítótárában egy napig.
+A pénztár a beküldött pontot ehhez méri: ismeretlen vagy másik fajtájú pontnál
+a `pickupPointId` mező hibát kap. Ha a lista nem érhető el, a pont átmegy (a
+GLS kiesése nem állítja le a pénztárt), és a hiba a `gls` csatornára naplózódik.
+
+### Utánvét átvételi ponton
+
+A pont a 2. lépésben dől el, a fizetési mód a 3.-ban — a térkép ezért nem
+szűrhet fizetési mód szerint. A GLS automatái nem fogadnak készpénzt, a
+csomagpontok egy része sem: az automata-blokk mindig, a csomagpont-blokk és a
+3. lépés utánvét-kártyája a pont szerint kiírja, hogy ott csak kártyával lehet
+fizetni.
+
+### Content Security Policy
+
+Ha a boltnak van CSP-je: a widget a `https://map.gls-hungary.com` originről
+tölt szkriptet (`script-src`) és adatot (`connect-src`); a térkép-csempék
+forrását a böngészőben kell mérni.
+
+### Twig-függvények
+
+`gls_pickup_point(id)` (a pont, vagy null), `gls_cod_card_only(order)`,
+`gls_is_cash_on_delivery(method)`, `gls_map_widget_url()`, `gls_map_country()`;
+a `gls_handles_delivery()` és a `gls_delivery_kind()` a módot és a
+szállítmányt (a fajta pillanatképét) is elfogadja.
+
 ## API-t hívó kód a pluginban és a hostban
 
 A MyGLS `Client` szándékosan **nem service**. API nélküli módban a

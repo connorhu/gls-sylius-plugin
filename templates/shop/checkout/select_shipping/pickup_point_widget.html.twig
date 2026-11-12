@@ -1,0 +1,87 @@
+{# A GLS csomagpont- és csomagautomata-választója a pénztárban (#255).
+
+   HOOKABLE a közös `codeconjure/sylius-carrier-bundle` widget-hookján:
+
+       sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields
+
+   Fajtánként EGY blokk, mert a két mód külön szállítási mód (#251): a
+   `data-carrier-delivery-kinds` a közös controller szerződése, csak a
+   választott mód fajtájánál látszik a blokk. A térkép a GLS
+   `<gls-dpm-dialog>` eleme, a fajtára szűrve (`filter-type`), a
+   típus-szűrő a felületről kivéve (`ui-filters` `type` nélkül) — a vevő a
+   térképen ne kapcsolhassa vissza a másik fajtát.
+
+   A `pickupPointId` mezőt a közös csomag adja; ez a sablon csak a választó
+   felülete. A választott pontot a `gls-pickup-point` controller a
+   `carrier:pickup-point-selected` eseménnyel adja át, a mezőbe a közös
+   `carrier-shipment` controller ír. A szerver a pontot a GLS pontlistája
+   szerint ellenőrzi (`PickupPointValidator`).
+
+   Utánvét: a pont a 2. lépésben dől el, a fizetési mód a 3.-ban, ezért a
+   térkép fizetési mód szerint nem szűrhet. Az automata-blokk mindig kiírja,
+   hogy utánvétnél ott csak kártyával lehet fizetni; a csomagpont-blokk akkor,
+   ha a választott pont nem fogad készpénzt. #}
+{% set form = hookable_metadata.context.form %}
+
+{% if form.pickupPointId is defined %}
+    {% set stored_id = form.pickupPointId.vars.value %}
+    {% set stored_point = gls_pickup_point(stored_id) %}
+    {% set language = (app.request.locale ?? 'hu')|split('_')|first %}
+    {% set kinds = [
+        { slug: 'gls_parcel_shop', filter: 'parcel-shop', key: 'shop' },
+        { slug: 'gls_parcel_locker', filter: 'parcel-locker', key: 'locker' },
+    ] %}
+
+    {% for kind in kinds %}
+        {# A tárolt pont csak a saját fajtája blokkjában látszik; elérhetetlen
+           pontlistánál (nincs név) az azonosító. #}
+        {% set shown = stored_id is not empty and (stored_point is null or stored_point.type == kind.filter) %}
+        {% set card_only = kind.key == 'shop' and shown and stored_point is not null and not stored_point.acceptsCash %}
+        <div
+            class="gls-pickup-point mb-3"
+            data-carrier-delivery-kinds="{{ kind.slug }}"
+            data-controller="gls-pickup-point"
+            data-gls-pickup-point-script-url-value="{{ gls_map_widget_url() }}"
+            data-gls-pickup-point-kind-value="{{ kind.filter }}"
+            data-gls-pickup-point-point-id-value="{{ shown ? stored_id }}"
+        >
+            <div class="gls-pickup-point__display mb-2" data-gls-pickup-point-target="display" {% if not shown %}hidden{% endif %}>
+                <span class="fw-semibold" data-gls-pickup-point-target="pointName">{{ shown ? (stored_point.name ?? stored_id) }}</span>
+                <br>
+                <span class="text-muted small" data-gls-pickup-point-target="pointAddress">{{ shown and stored_point is not null ? stored_point.addressLine }}</span>
+            </div>
+
+            {% if kind.key == 'locker' %}
+                <p class="gls-pickup-point__notice small text-muted mb-2">{{ 'codeconjure.gls.pickup_point.cod_card_only'|trans }}</p>
+            {% else %}
+                <p class="gls-pickup-point__notice small text-muted mb-2" data-gls-pickup-point-target="cashNotice" {% if not card_only %}hidden{% endif %}>
+                    {{- 'codeconjure.gls.pickup_point.cod_card_only'|trans -}}
+                </p>
+            {% endif %}
+
+            <p class="gls-pickup-point__error small text-danger mb-2" data-gls-pickup-point-target="error" hidden>
+                {{- 'codeconjure.gls.pickup_point.map_unavailable'|trans -}}
+            </p>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-gls-pickup-point-target="button"
+                data-action="gls-pickup-point#open"
+                data-label-select="{{ ('codeconjure.gls.pickup_point.' ~ kind.key ~ '.select')|trans }}"
+                data-label-change="{{ ('codeconjure.gls.pickup_point.' ~ kind.key ~ '.change')|trans }}"
+            >
+                {{- ('codeconjure.gls.pickup_point.' ~ kind.key ~ (shown ? '.change' : '.select'))|trans -}}
+            </button>
+
+            <gls-dpm-dialog
+                data-gls-pickup-point-target="dialog"
+                data-action="change->gls-pickup-point#select"
+                filter-type="{{ kind.filter }}"
+                ui-filters="opening-hours,features,pickup-time"
+                country="{{ gls_map_country() }}"
+                language="{{ language }}"
+            ></gls-dpm-dialog>
+        </div>
+    {% endfor %}
+{% endif %}

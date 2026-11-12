@@ -42,6 +42,20 @@ enum GlsDeliveryKind: string
     }
 
     /**
+     * A GLS térkép-widget `filter-type` értéke és a nyilvános pontlista
+     * (`map.gls-hungary.com/data/deliveryPoints/{ország}.json`) `type` mezője.
+     * Házhoz szállításnál nincs.
+     */
+    public function mapFilterType(): ?string
+    {
+        return match ($this) {
+            self::HomeDelivery => null,
+            self::ParcelShop => 'parcel-shop',
+            self::ParcelLocker => 'parcel-locker',
+        };
+    }
+
+    /**
      * A mód GLS-fajtája, vagy null, ha a mód nem GLS-é (más szállító, nincs
      * fajtája, vagy nem a host-szerződést beszéli).
      */
@@ -52,5 +66,24 @@ enum GlsDeliveryKind: string
         }
 
         return self::tryFrom($method->getDeliveryKindSlug() ?? '');
+    }
+
+    /**
+     * A szállítmány GLS-fajtája a SAJÁT slugjából (a host a mód választásakor
+     * pillanatképet tesz el), vagy null.
+     */
+    public static function fromShipment(?object $shipment): ?self
+    {
+        if (!$shipment instanceof GlsShipmentInterface) {
+            return null;
+        }
+
+        return self::tryFrom($shipment->getDeliveryKindSlug() ?? '');
+    }
+
+    /** A módé vagy a szállítmányé — a sablonok mindkettőt kérdezik. */
+    public static function of(?object $subject): ?self
+    {
+        return $subject instanceof GlsShipmentInterface ? self::fromShipment($subject) : self::fromShippingMethod($subject);
     }
 }

@@ -11,14 +11,19 @@ use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use CodeConjure\SyliusGlsPlugin\CodeConjureSyliusGlsPlugin;
 use CodeConjure\SyliusGlsPlugin\DependencyInjection\CodeConjureSyliusGlsExtension;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
+use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\EmptyPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Translation\IdentityTranslator;
 
 /**
  * A konténer MINDKÉT módban fordul és példányosít (#253 „Kész, ha"):
@@ -191,6 +196,54 @@ final class ContainerCompilationTest extends TestCase
         self::assertDirectoryExists(\dirname(__DIR__, 2) . '/src/Migrations');
     }
 
+    /** A csomagpont-választó szolgáltatásai (#255) példányosíthatók. */
+    public function testThePickupPointServicesInstantiate(): void
+    {
+        $container = $this->dumpedContainer([]);
+
+        self::assertInstanceOf(DeliveryPointCatalog::class, $container->get(DeliveryPointCatalog::class));
+        self::assertInstanceOf(GlsRuntime::class, $container->get(GlsRuntime::class));
+        self::assertInstanceOf(CheckoutShipmentTypeExtension::class, $container->get(CheckoutShipmentTypeExtension::class));
+    }
+
+    public function testThePickupPointServicesAreTagged(): void
+    {
+        $container = $this->builder([]);
+
+        self::assertTrue($container->getDefinition(CheckoutShipmentTypeExtension::class)->hasTag('form.type_extension'));
+        self::assertTrue($container->getDefinition(GlsRuntime::class)->hasTag('twig.runtime'));
+        self::assertSame([['channel' => 'gls']], $container->getDefinition(DeliveryPointCatalog::class)->getTag('monolog.logger'));
+    }
+
+    /**
+     * A hookok mind ÚJ kulcsok: a prepend hozzáad, a host felülírhat. Twig
+     * Hooks nélküli hoston nem hivatkozik nem létező extensionre.
+     */
+    public function testTheTwigHooksArePrepended(): void
+    {
+        $container = new ContainerBuilder();
+        $container->registerExtension(self::stubExtension('sylius_twig_hooks'));
+
+        (new CodeConjureSyliusGlsExtension())->prepend($container);
+
+        $hooks = $container->getExtensionConfig('sylius_twig_hooks')[0]['hooks'] ?? null;
+        self::assertIsArray($hooks);
+
+        $widget = $hooks['sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields'] ?? null;
+        $summary = $hooks['sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point'] ?? null;
+        $payment = $hooks['sylius_shop.shared.form.select_payment.payment.choice.details'] ?? null;
+        self::assertIsArray($widget);
+        self::assertIsArray($summary);
+        self::assertIsArray($payment);
+        self::assertSame(['template' => '@CodeConjureSyliusGlsPlugin/shop/checkout/select_shipping/pickup_point_widget.html.twig'], $widget['gls'] ?? null);
+        self::assertArrayHasKey('gls', $summary);
+        self::assertArrayHasKey('gls_cod_notice', $payment);
+
+        $bare = new ContainerBuilder();
+        (new CodeConjureSyliusGlsExtension())->prepend($bare);
+        self::assertSame([], $bare->getExtensionConfig('sylius_twig_hooks'));
+    }
+
     /** @param array<string, mixed> $config */
     private function builder(array $config): ContainerBuilder
     {
@@ -199,6 +252,9 @@ final class ContainerCompilationTest extends TestCase
 
         // A dekorált Sylius-resolver a HOST-ban él; itt egy helyettes áll a helyén.
         $container->register(CodPaymentMethodsResolver::DECORATED_SERVICE, EmptyPaymentMethodsResolver::class);
+        // A host gyorsítótára és fordítója (#255).
+        $container->register('cache.app', ArrayAdapter::class);
+        $container->register('translator', IdentityTranslator::class);
 
         (new CodeConjureSyliusGlsExtension())->load([$config], $container);
 
