@@ -1,0 +1,40 @@
+{
+    "name": "codeconjure/gls-sylius-plugin",
+    "description": "GLS szállítási integráció Syliushoz: szállítási módok, csomagpont, díj, és — MyGLS API-val — csomagfeladás, címke, nyomkövetés.",
+    "type": "sylius-plugin",
+    "keywords": ["symfony-ux", "sylius", "sylius-plugin", "gls", "mygls", "shipping"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "codeconjure/gls": "^0.1",
+        "codeconjure/sylius-carrier-bundle": "^0.1",
+        "nyholm/psr7": "^1.8",
+        "sylius/sylius": "^2.1",
+        "symfony/http-client": "^7.2"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^12.0 || ^13.0",
+        "sylius-labs/coding-standard": "^4.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "CodeConjure\\SyliusGlsPlugin\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CodeConjure\\SyliusGlsPlugin\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "php-http/discovery": false
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
