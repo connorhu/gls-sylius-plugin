@@ -2,14 +2,20 @@
 
 declare(strict_types=1);
 
+use CodeConjure\SyliusGlsPlugin\Address\StreetSplitter;
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
 use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use CodeConjure\SyliusGlsPlugin\Cod\PickupPointCashCheck;
+use CodeConjure\SyliusGlsPlugin\Controller\GlsParcelController;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
+use CodeConjure\SyliusGlsPlugin\Menu\AdminMenuListener;
+use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelPayloadFactory;
+use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelService;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Pickup\PickupPointValidator;
+use CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -98,6 +104,53 @@ return static function (ContainerConfigurator $container): void {
             service(PickupPointCashCheck::class),
             service(CodPolicy::class),
             param('codeconjure_gls.api.country'),
+            service(ApiAccess::class),
+            service(GlsParcelRepository::class),
+            service(GlsParcelPayloadFactory::class),
         ])
         ->tag('twig.runtime');
+
+    // --- A csomagfeladás az adminból (#257) ---
+
+    $services->set(GlsParcelRepository::class)
+        ->args([service('doctrine')])
+        ->tag('doctrine.repository_service');
+
+    $services->set(StreetSplitter::class);
+
+    $services->set(GlsParcelPayloadFactory::class)
+        ->args([
+            service(StreetSplitter::class),
+            service(DeliveryPointCatalog::class),
+            service(CodPolicy::class),
+            param('codeconjure_gls.pickup_address'),
+            param('codeconjure_gls.notifications.email'),
+            param('codeconjure_gls.notifications.sms'),
+        ]);
+
+    $services->set(GlsParcelService::class)
+        ->args([
+            service(ApiAccess::class),
+            service(GlsParcelPayloadFactory::class),
+            service(EligibilityChecker::class),
+            service(GlsParcelRepository::class),
+            service('doctrine.orm.entity_manager'),
+            service('state_machine.gls_parcel'),
+            service('sylius_abstraction.state_machine'),
+            param('codeconjure_gls.label.format'),
+        ]);
+
+    $services->set(GlsParcelController::class)
+        ->args([
+            service(GlsParcelService::class),
+            service(GlsParcelRepository::class),
+            service('doctrine.orm.entity_manager'),
+            service('router'),
+            service('security.csrf.token_manager'),
+        ])
+        ->public()
+        ->tag('controller.service_arguments');
+
+    $services->set(AdminMenuListener::class)
+        ->tag('kernel.event_listener', ['event' => 'sylius.menu.admin.main']);
 };

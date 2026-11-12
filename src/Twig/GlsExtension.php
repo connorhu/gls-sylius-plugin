@@ -23,6 +23,10 @@ final class GlsExtension extends AbstractExtension
             new TwigFunction('gls_pickup_point', [GlsRuntime::class, 'pickupPoint']),
             new TwigFunction('gls_cod_card_only', [GlsRuntime::class, 'codCardOnly']),
             new TwigFunction('gls_is_cash_on_delivery', [GlsRuntime::class, 'isCashOnDelivery']),
+            new TwigFunction('gls_api_enabled', [GlsRuntime::class, 'apiEnabled']),
+            new TwigFunction('gls_parcel_for_shipment', [GlsRuntime::class, 'parcelForShipment']),
+            new TwigFunction('gls_parcel_preview', [GlsRuntime::class, 'parcelPreview']),
+            new TwigFunction('gls_tracking_url', [GlsRuntime::class, 'trackingUrl']),
         ];
     }
 }

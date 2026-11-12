@@ -1,0 +1,58 @@
+# A GLS csomag állapotgépe (#257). A FoxPost `foxpost_parcel`-je a kiindulás,
+# két eltéréssel: a feladás SZINKRON (nincs `pending_registration`), és a
+# „regisztrált" (PrepareLabels → ParcelId) meg a „címke kész"
+# (GetPrintedLabels → ParcelNumber) külön hely. A kézi (API nélküli) ág egy
+# átmenet: `manual_hand_over`, a kézzel rögzített nyomkövetési számmal.
+framework:
+    workflows:
+        gls_parcel:
+            type: state_machine
+            marking_store:
+                type: method
+                property: internalStatus
+            supports:
+                - CodeConjure\SyliusGlsPlugin\Entity\GlsParcel
+            initial_marking: eligible
+            places:
+                - eligible
+                - registration_failed
+                - registered
+                - label_ready
+                - handed_over
+                - in_transit
+                - delivered
+                - delivery_failed
+                - returned
+                - cancelled
+            transitions:
+                register:
+                    from: [eligible, registration_failed, cancelled]
+                    to: registered
+                register_fail:
+                    from: [eligible, registration_failed, cancelled]
+                    to: registration_failed
+                print_label:
+                    from: [registered]
+                    to: label_ready
+                hand_over:
+                    from: [label_ready]
+                    to: handed_over
+                cancel:
+                    from: [registered, label_ready]
+                    to: cancelled
+                manual_hand_over:
+                    from: [eligible, registration_failed, cancelled]
+                    to: handed_over
+                # A nyomkövetés-szinkron (#258) átmenetei.
+                tracking_in_transit:
+                    from: [handed_over]
+                    to: in_transit
+                tracking_delivered:
+                    from: [handed_over, in_transit, delivery_failed]
+                    to: delivered
+                tracking_failed:
+                    from: [handed_over, in_transit]
+                    to: delivery_failed
+                tracking_returned:
+                    from: [in_transit, delivery_failed]
+                    to: returned

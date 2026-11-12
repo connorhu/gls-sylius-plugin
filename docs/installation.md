@@ -167,6 +167,7 @@ felülírhatja, vagy `enabled: false`-szal kikapcsolhatja.
 | `sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields` | `gls` | a választó (2. lépés) |
 | `sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point` | `gls` | a választott pont a rendelés-összegzőben |
 | `sylius_shop.shared.form.select_payment.payment.choice.details` | `gls_cod_notice` | utánvét-figyelmeztetés a 3. lépés utánvét-kártyáján |
+| `codeconjure_carrier.admin.order.shipment.ship` | `gls` | az admin feladás-panel (#257, l. a 9. pontot) |
 
 Az összegző hookját (`…addresses.shipping.pickup_point`) a **host sablonja**
 hívja a szállítási blokkban, amikor a szállítmány átvételi pontos — ezt a
@@ -202,6 +203,74 @@ forrását a böngészőben kell mérni.
 `gls_is_cash_on_delivery(method)`, `gls_map_widget_url()`, `gls_map_country()`;
 a `gls_handles_delivery()` és a `gls_delivery_kind()` a módot és a
 szállítmányt (a fajta pillanatképét) is elfogadja.
+
+## 9. Csomagfeladás az adminból
+
+### Route-ok
+
+A plugin admin route-jai EGY importból jönnek. `config/routes/codeconjure_gls.yaml`:
+
+```yaml
+codeconjure_gls:
+    resource: '@CodeConjureSyliusGlsPlugin/src/Resources/config/routes.yaml'
+```
+
+Az előtag `/%sylius_admin.path_name%` — a műveletek a Sylius admin tűzfalán belül
+maradnak. A csomaglista: **Értékesítés → GLS csomagok**
+(`codeconjure_gls_admin_parcel_index`).
+
+### Migráció
+
+A `gls_parcel` tábla a plugin migrációja (`Version20261112000001`, PostgreSQL):
+
+```bash
+bin/console doctrine:migrations:migrate
+```
+
+Ha a bolt a `sylius_labs_doctrine_migrations_extra.migrations` kulcsát maga is
+beállítja, az **felülírja** a plugin kijelentését (a kulcs cserélődik, nem
+fésülődik): ilyenkor a `'CodeConjure\SyliusGlsPlugin\Migrations': ~` sort fel kell venni.
+
+### A rendelés-oldal
+
+A feladás-panel a közös szállító-csomag admin-hookján ül
+(`codeconjure_carrier.admin.order.shipment.ship` → `gls`), tehát csak a csomag
+`ship` slot-sora kell (a csomag telepítési leírása) — ha a boltban már fut
+szállító-plugin, ez megvan. A panel csak GLS-szállítmánynál és `ship`-képes
+(`ready`) szállítmánynál jelenik meg.
+
+- **API-módban:** feladás (súly, darabszám) → `PrepareLabels`; a címke-PDF
+  (`GetPrintedLabels`) adja a nyomkövetési számot, ami a Sylius szállítmány
+  `tracking` mezőjébe is bekerül; „Átadva a GLS-nek" → a szállítmány `ship`
+  (a Sylius kiküldi a szállítási e-mailt a nyomkövetési számmal); közben
+  sztornó (`DeleteLabels`). A csomaglistán tömeges címkenyomtatás (max. 99) és
+  tömeges sztornó.
+- **API nélkül:** a GLS felületére átviendő adatok másolható formában
+  (hivatkozás, címzett, telefon, e-mail, cím vagy átvételi pont, utánvét), és a
+  nyomkövetési szám kézi rögzítése, amitől a szállítmány `ship`.
+
+A műveletek POST-ok, `gls_parcel` CSRF-tokennel.
+
+### A címke és az értesítések
+
+```yaml
+codeconjure_gls:
+    label:
+        format: A4_2x2      # A4_2x2 (4 db A6 egy A4-en), A4_4x1, vagy hőnyomtató
+    notifications:
+        email: false        # FDS — a GLS e-mailben értesíti a címzettet
+        sms: false          # FSS — SMS is (csak e-maillel együtt)
+```
+
+A címke nyomtatásakor a `print_position` (1–4) adja meg, hányadik negyeden
+kezdődjön egy részben elhasznált A4-es lap.
+
+### Az utca és a házszám
+
+A bolt egyetlen `street` mezőt tárol, a MyGLS `Street` / `HouseNumber` (csak
+szám) / `HouseNumberInfo` hármast vár: a plugin `Address\StreetSplitter`-e bontja
+(„Petőfi tér 5. 2. em. 4." → `Petőfi tér` / `5` / `2. em. 4.`). Ami nem bontható
+(nincs házszám, helyrajzi szám), a teljes sorral, házszám nélkül megy.
 
 ## API-t hívó kód a pluginban és a hostban
 

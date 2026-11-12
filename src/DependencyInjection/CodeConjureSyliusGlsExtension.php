@@ -22,6 +22,14 @@ final class CodeConjureSyliusGlsExtension extends Extension implements PrependEx
 
     public const string MONOLOG_CHANNEL = 'gls';
 
+    /** @var array<string, string> */
+    public const array APP_CONFIG_FILES = [
+        'sylius_twig_hooks' => 'hooks.yaml',
+        'framework' => 'gls_parcel.yaml',
+        'sylius_resource' => 'sylius_resource.yaml',
+        'sylius_grid' => 'grid.yaml',
+    ];
+
     public function getAlias(): string
     {
         return Configuration::ALIAS;
@@ -57,6 +65,12 @@ final class CodeConjureSyliusGlsExtension extends Extension implements PrependEx
         $container->setParameter('codeconjure_gls.cod.payment_method_codes', $codes);
         $container->setParameter('codeconjure_gls.cod.max_amount', $cod['max_amount']);
         $container->setParameter('codeconjure_gls.cod.international', $cod['international']);
+
+        foreach (['label', 'notifications'] as $section) {
+            foreach (self::section($config, $section) as $key => $value) {
+                $container->setParameter('codeconjure_gls.' . $section . '.' . $key, $value);
+            }
+        }
 
         foreach (self::section($config, 'packaging') as $key => $value) {
             $container->setParameter('codeconjure_gls.packaging.' . $key, $value);
@@ -103,15 +117,21 @@ final class CodeConjureSyliusGlsExtension extends Extension implements PrependEx
             $container->prependExtensionConfig('monolog', ['channels' => [self::MONOLOG_CHANNEL]]);
         }
 
-        // A pénztár és az összegző hookjai (#255) — mind ÚJ kulcs, a prepend
-        // tehát hozzáad, és a host configja felülírhatja (pl. a sablont).
-        if ($container->hasExtension('sylius_twig_hooks')) {
-            $parsed = Yaml::parseFile(\dirname(__DIR__) . '/Resources/config/app/hooks.yaml');
-            \assert(\is_array($parsed) && \is_array($parsed['sylius_twig_hooks'] ?? null));
+        // A plugin saját YAML-jai, mindegyik a gyökérkulcsa szerinti
+        // extensionnek (a FoxPost plugin mintája): a hookok (#255) és az
+        // admin csomagkezelés (#257) — workflow, resource, grid. Mind ÚJ
+        // kulcs, a prepend tehát hozzáad, és a host felülírhatja.
+        foreach (self::APP_CONFIG_FILES as $extension => $file) {
+            if (!$container->hasExtension($extension)) {
+                continue;
+            }
 
-            /** @var array<string, mixed> $hooks */
-            $hooks = $parsed['sylius_twig_hooks'];
-            $container->prependExtensionConfig('sylius_twig_hooks', $hooks);
+            $parsed = Yaml::parseFile(\dirname(__DIR__) . '/Resources/config/app/' . $file);
+            \assert(\is_array($parsed) && \is_array($parsed[$extension] ?? null));
+
+            /** @var array<string, mixed> $config */
+            $config = $parsed[$extension];
+            $container->prependExtensionConfig($extension, $config);
         }
 
         $this->prependDoctrineMigrations($container);

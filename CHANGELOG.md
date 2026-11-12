@@ -7,6 +7,41 @@ visszafelé kompatibilisek.
 
 ## [Nem kiadott]
 
+## [0.4.0] – 2026-11-12
+
+Csomagfeladás, címke és sztornó az adminból, API-val és API nélkül
+(bolt-issue #257).
+
+### Hozzáadva
+
+- `Entity\GlsParcel` + `GlsParcelStatus` + migráció (`gls_parcel` tábla),
+  `Repository\GlsParcelRepository`, `codeconjure_gls.parcel` Sylius-resource.
+- A `gls_parcel` workflow: a „regisztrált" (`ParcelId`) és a „címke kész"
+  (`ParcelNumber`) külön hely; kézi ág (`manual_hand_over`); a nyomkövetés
+  (#258) átmenetei.
+- `Address\StreetSplitter` — magyar címsor a MyGLS `Street` / `HouseNumber` /
+  `HouseNumberInfo` hármasára.
+- `Parcel\GlsParcelPayloadFactory` — pillanatkép a csomagon, abból a MyGLS
+  `Parcel` (utánvét forintban, PSD a pont azonosítójával és teljes
+  kapcsolattartóval, átvételi pontnál a pont címe, értesítések a konfig szerint).
+- `Parcel\GlsParcelService` — feladás (`PrepareLabels`), címke
+  (`GetPrintedLabels`, a nyomkövetési szám a Sylius szállítmányra is), sztornó
+  (`DeleteLabels`), átadás és kézi feladás (a Sylius szállítmány `ship`).
+- Admin: feladás-panel a közös szállító-csomag `ship` hookján (API-módban
+  feladás / címke / átadás / sztornó, API nélkül a GLS felületére átviendő
+  adatok és a nyomkövetési szám rögzítése), csomaglista (Értékesítés → GLS
+  csomagok) tömeges címkenyomtatással és sztornóval; CSRF-védett POST-ok.
+- Konfiguráció: `label.format` (alapból `A4_2x2`), `notifications.email` /
+  `notifications.sms` (FDS / FSS, alapból ki).
+- Twig: `gls_api_enabled()`, `gls_parcel_for_shipment()`,
+  `gls_parcel_preview()`, `gls_tracking_url()`.
+
+### Változott
+
+- Új futásidejű követelmény: `symfony/workflow ^7.4` — a `gls_parcel`
+  állapotgép backed enumban tárolja a helyét, amit a `MethodMarkingStore` a
+  7.4 óta kezel (régebbin: „could not be converted to string").
+
 ## [0.3.0] – 2026-11-12
 
 A csomagpont- és csomagautomata-választó a pénztárban, és a választott pont
@@ -74,7 +109,8 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
-[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.3.0...main
+[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.4.0...main
+[0.4.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.4.0
 [0.3.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.3.0
 [0.2.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.2.0
 [0.1.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.1.0

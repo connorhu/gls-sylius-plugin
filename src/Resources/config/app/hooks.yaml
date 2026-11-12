@@ -22,3 +22,11 @@ sylius_twig_hooks:
             gls_cod_notice:
                 template: '@CodeConjureSyliusGlsPlugin/shop/checkout/select_payment/cod_notice.html.twig'
                 priority: -10
+
+        # Az admin feladás-panel (#257) a közös szállító-csomag admin-hookján.
+        # ÚJ név, a prepend() nyer. A Sylius foglalt `ship` slotját a host a
+        # közös csomag sablonjára állítja; az minden szállítót ebből a hookból
+        # rajzol. A panel csak GLS-szállítmánynál rajzol.
+        'codeconjure_carrier.admin.order.shipment.ship':
+            gls:
+                template: '@CodeConjureSyliusGlsPlugin/admin/shipment/ship.html.twig'

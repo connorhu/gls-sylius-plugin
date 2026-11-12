@@ -123,6 +123,23 @@ final class ContainerCompilationTest extends TestCase
         self::assertSame('sylius.resolver.payment_methods', $definition->getDecoratedService()[0] ?? null);
     }
 
+    /** A címke és az értesítések (#257): alapból A4_2x2, értesítés nélkül (#260). */
+    public function testTheLabelAndNotificationDefaults(): void
+    {
+        $container = $this->dumpedContainer([]);
+
+        self::assertSame('A4_2x2', $container->getParameter('codeconjure_gls.label.format'));
+        self::assertFalse($container->getParameter('codeconjure_gls.notifications.email'));
+        self::assertFalse($container->getParameter('codeconjure_gls.notifications.sms'));
+    }
+
+    public function testTheLabelFormatIsValidated(): void
+    {
+        $this->expectException(\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException::class);
+
+        $this->builder(['label' => ['format' => 'A4_2x4']]);
+    }
+
     public function testTheCodPolicyIsConfigurable(): void
     {
         $container = $this->dumpedContainer(['cod' => ['payment_method_codes' => ['utanvet'], 'max_amount' => 100, 'international' => true]]);
@@ -202,7 +219,8 @@ final class ContainerCompilationTest extends TestCase
         $container = $this->dumpedContainer([]);
 
         self::assertInstanceOf(DeliveryPointCatalog::class, $container->get(DeliveryPointCatalog::class));
-        self::assertInstanceOf(GlsRuntime::class, $container->get(GlsRuntime::class));
+        // A `GlsRuntime` a csomag-repositoryn át Doctrine-t kér (#257); a
+        // példányosítását a befogadó bolt tesztjei mérik.
         self::assertInstanceOf(CheckoutShipmentTypeExtension::class, $container->get(CheckoutShipmentTypeExtension::class));
     }
 
@@ -213,6 +231,39 @@ final class ContainerCompilationTest extends TestCase
         self::assertTrue($container->getDefinition(CheckoutShipmentTypeExtension::class)->hasTag('form.type_extension'));
         self::assertTrue($container->getDefinition(GlsRuntime::class)->hasTag('twig.runtime'));
         self::assertSame([['channel' => 'gls']], $container->getDefinition(DeliveryPointCatalog::class)->getTag('monolog.logger'));
+    }
+
+    /** Az admin csomagkezelés (#257) szolgáltatásai a host valódi id-ira hivatkoznak. */
+    public function testTheParcelServicesReferenceTheHostServices(): void
+    {
+        $container = $this->builder([]);
+        $arguments = array_map('strval', $container->getDefinition(\CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelService::class)->getArguments());
+
+        self::assertContains('state_machine.gls_parcel', $arguments);
+        self::assertContains('sylius_abstraction.state_machine', $arguments);
+        self::assertContains('doctrine.orm.entity_manager', $arguments);
+        self::assertTrue($container->getDefinition(\CodeConjure\SyliusGlsPlugin\Controller\GlsParcelController::class)->isPublic());
+        self::assertTrue($container->getDefinition(\CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository::class)->hasTag('doctrine.repository_service'));
+        self::assertSame([['event' => 'sylius.menu.admin.main']], $container->getDefinition(\CodeConjure\SyliusGlsPlugin\Menu\AdminMenuListener::class)->getTag('kernel.event_listener'));
+    }
+
+    /** A workflow, a resource és a grid a megfelelő extensionnek megy. */
+    public function testTheAdminConfigurationIsPrepended(): void
+    {
+        $container = new ContainerBuilder();
+
+        foreach (['framework', 'sylius_resource', 'sylius_grid'] as $alias) {
+            $container->registerExtension(self::stubExtension($alias));
+        }
+
+        (new CodeConjureSyliusGlsExtension())->prepend($container);
+
+        $framework = $container->getExtensionConfig('framework')[0] ?? null;
+        self::assertIsArray($framework);
+        self::assertIsArray($framework['workflows'] ?? null);
+        self::assertArrayHasKey('gls_parcel', $framework['workflows']);
+        self::assertNotSame([], $container->getExtensionConfig('sylius_resource'));
+        self::assertNotSame([], $container->getExtensionConfig('sylius_grid'));
     }
 
     /**
@@ -238,6 +289,8 @@ final class ContainerCompilationTest extends TestCase
         self::assertSame(['template' => '@CodeConjureSyliusGlsPlugin/shop/checkout/select_shipping/pickup_point_widget.html.twig'], $widget['gls'] ?? null);
         self::assertArrayHasKey('gls', $summary);
         self::assertArrayHasKey('gls_cod_notice', $payment);
+        self::assertIsArray($hooks['codeconjure_carrier.admin.order.shipment.ship'] ?? null);
+        self::assertSame(['template' => '@CodeConjureSyliusGlsPlugin/admin/shipment/ship.html.twig'], $hooks['codeconjure_carrier.admin.order.shipment.ship']['gls'] ?? null);
 
         $bare = new ContainerBuilder();
         (new CodeConjureSyliusGlsExtension())->prepend($bare);
@@ -255,6 +308,11 @@ final class ContainerCompilationTest extends TestCase
         // A host gyorsítótára és fordítója (#255).
         $container->register('cache.app', ArrayAdapter::class);
         $container->register('translator', IdentityTranslator::class);
+        // Az admin csomagkezelés (#257) host-szolgáltatásai — a dumpolt
+        // konténerben csak a hivatkozás feloldása számít.
+        foreach (['doctrine', 'doctrine.orm.entity_manager', 'state_machine.gls_parcel', 'sylius_abstraction.state_machine', 'router', 'security.csrf.token_manager'] as $id) {
+            $container->register($id, \stdClass::class)->setSynthetic(true);
+        }
 
         (new CodeConjureSyliusGlsExtension())->load([$config], $container);
 

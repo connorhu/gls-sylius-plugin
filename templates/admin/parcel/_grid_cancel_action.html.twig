@@ -1,0 +1,7 @@
+{% if data.internalStatus.isCancellable %}
+    <form method="post" action="{{ path('codeconjure_gls_admin_parcel_cancel', {id: data.id}) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('gls_parcel') }}">
+        <button type="submit" class="btn btn-danger"
+                onclick="return confirm('{{ 'codeconjure.gls.ui.cancel_confirm'|trans|e('js') }}')">{{ action.label|trans }}</button>
+    </form>
+{% endif %}

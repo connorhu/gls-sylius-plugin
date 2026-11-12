@@ -93,6 +93,13 @@ final class InstallationContractTest extends TestCase
         self::assertStringContainsString('@codeconjure/gls-sylius-plugin', self::doc());
     }
 
+    /** Az admin route-ok importja nélkül a csomaglista és a panel gombjai 404-et adnak. */
+    public function testTheRouteImportIsDocumented(): void
+    {
+        self::assertFileExists(\dirname(__DIR__, 2) . '/src/Resources/config/routes.yaml');
+        self::assertStringContainsString("resource: '@CodeConjureSyliusGlsPlugin/src/Resources/config/routes.yaml'", self::doc());
+    }
+
     private static function doc(): string
     {
         return self::read('docs/installation.md');
