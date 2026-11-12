@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CodeConjure\SyliusGlsPlugin\Repository;
 
 use CodeConjure\SyliusGlsPlugin\Entity\GlsParcel;
+use CodeConjure\SyliusGlsPlugin\Entity\GlsParcelStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -44,6 +45,20 @@ class GlsParcelRepository extends ServiceEntityRepository implements RepositoryI
         }
 
         return $this->findBy(['id' => $ids], ['id' => 'ASC']);
+    }
+
+    /**
+     * A nyomkövetés-szinkron (#258) csomagjai: van nyomkövetési számuk, és még
+     * nem lezártak (a kinyomtatott, de át nem adott is — a GLS szkennelése
+     * pótolja az átadást).
+     *
+     * @return list<GlsParcel>
+     */
+    public function findForTracking(): array
+    {
+        return $this->findBy([
+            'internalStatus' => [GlsParcelStatus::LabelReady, GlsParcelStatus::HandedOver, GlsParcelStatus::InTransit, GlsParcelStatus::DeliveryFailed],
+        ], ['id' => 'ASC']);
     }
 
     public function createAdminGridQueryBuilder(): QueryBuilder
