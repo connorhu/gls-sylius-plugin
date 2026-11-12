@@ -6,6 +6,7 @@ namespace CodeConjure\SyliusGlsPlugin\Tests\Unit;
 
 use CodeConjure\SyliusGlsPlugin\DependencyInjection\CodeConjureSyliusGlsExtension;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Amit a hostnak kell megtennie, az legyen LEÍRVA a `docs/installation.md`-
@@ -51,6 +52,45 @@ final class InstallationContractTest extends TestCase
         self::assertIsInt($carrier);
         self::assertIsInt($gls);
         self::assertLessThan($gls, $carrier, 'A közös szállító-csomagnak a GLS plugin ELŐTT kell állnia.');
+    }
+
+    /**
+     * A plugin hookjai a host felületén jelennek meg; a host felülírhatja
+     * (sablon, prioritás) vagy kikapcsolhatja őket — ehhez tudnia kell a
+     * nevüket. A lista a plugin hooks.yaml-jából jön.
+     */
+    public function testEveryTwigHookThePluginRegistersIsDocumented(): void
+    {
+        $parsed = Yaml::parseFile(\dirname(__DIR__, 2) . '/src/Resources/config/app/hooks.yaml');
+        self::assertIsArray($parsed);
+        self::assertIsArray($parsed['sylius_twig_hooks'] ?? null);
+        $hooks = $parsed['sylius_twig_hooks']['hooks'] ?? null;
+        self::assertIsArray($hooks);
+
+        foreach ($hooks as $hook => $hookables) {
+            self::assertIsArray($hookables);
+
+            foreach (array_keys($hookables) as $name) {
+                self::assertStringContainsString((string) $hook, self::doc(), \sprintf('A `%s` hook nincs dokumentálva.', $hook));
+                self::assertMatchesRegularExpression('/`' . preg_quote((string) $name, '/') . '`/', self::doc(), \sprintf('A `%s` hookable neve nincs dokumentálva.', $name));
+            }
+        }
+    }
+
+    /** A Stimulus controller a host build-jébe kerül — a lépésnek le kell írva lennie. */
+    public function testTheStimulusControllerIsDocumented(): void
+    {
+        $package = json_decode(self::read('assets/package.json'), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($package);
+        self::assertIsArray($package['symfony'] ?? null);
+        $controllers = $package['symfony']['controllers'] ?? null;
+        self::assertIsArray($controllers);
+
+        foreach (array_keys($controllers) as $name) {
+            self::assertStringContainsString((string) $name, self::doc());
+        }
+
+        self::assertStringContainsString('@codeconjure/gls-sylius-plugin', self::doc());
     }
 
     private static function doc(): string

@@ -1,0 +1,5 @@
+codeconjure:
+    gls:
+        pickup_point:
+            unknown: 'A választott átvételi pont nem GLS-pont. Válassz pontot a térképen.'
+            wrong_type: 'A választott pont nem ehhez a szállítási módhoz tartozik. Válassz pontot a térképen.'

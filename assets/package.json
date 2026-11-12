@@ -1,0 +1,28 @@
+{
+    "name": "@codeconjure/gls-sylius-plugin",
+    "description": "GLS szállítási integráció Syliushoz: a csomagpont- és csomagautomata-választó a pénztárban.",
+    "license": "MIT",
+    "version": "1.0.0",
+    "type": "module",
+    "symfony": {
+        "controllers": {
+            "gls-pickup-point": {
+                "main": "controllers/gls_pickup_point_controller.js",
+                "name": "gls-pickup-point",
+                "fetch": "eager",
+                "enabled": true
+            }
+        }
+    },
+    "peerDependencies": {
+        "@hotwired/stimulus": "^3.0.0"
+    },
+    "scripts": {
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "@hotwired/stimulus": "^3.2.2",
+        "jsdom": "^26.1.0",
+        "vitest": "^4.1.0"
+    }
+}

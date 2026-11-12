@@ -1,0 +1,5 @@
+codeconjure:
+    gls:
+        pickup_point:
+            unknown: 'The selected pickup point is not a GLS point. Please choose one on the map.'
+            wrong_type: 'The selected point does not belong to this shipping method. Please choose one on the map.'

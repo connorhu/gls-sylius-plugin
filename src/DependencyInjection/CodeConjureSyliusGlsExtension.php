@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * A service-konfig PHP-fájlban él, nem XML-ben: a Symfony 8 kivezette az
@@ -100,6 +101,17 @@ final class CodeConjureSyliusGlsExtension extends Extension implements PrependEx
         // különben a `gls` rekordok prodban elvesznek.
         if ($container->hasExtension('monolog')) {
             $container->prependExtensionConfig('monolog', ['channels' => [self::MONOLOG_CHANNEL]]);
+        }
+
+        // A pénztár és az összegző hookjai (#255) — mind ÚJ kulcs, a prepend
+        // tehát hozzáad, és a host configja felülírhatja (pl. a sablont).
+        if ($container->hasExtension('sylius_twig_hooks')) {
+            $parsed = Yaml::parseFile(\dirname(__DIR__) . '/Resources/config/app/hooks.yaml');
+            \assert(\is_array($parsed) && \is_array($parsed['sylius_twig_hooks'] ?? null));
+
+            /** @var array<string, mixed> $hooks */
+            $hooks = $parsed['sylius_twig_hooks'];
+            $container->prependExtensionConfig('sylius_twig_hooks', $hooks);
         }
 
         $this->prependDoctrineMigrations($container);

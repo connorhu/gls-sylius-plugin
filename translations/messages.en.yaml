@@ -5,3 +5,14 @@ codeconjure:
                 api: 'MyGLS API'
                 manual: 'Manual hand-over (no API)'
             api_not_configured: 'The MyGLS API configuration is incomplete: %settings%'
+        pickup_point:
+            shop:
+                select: 'Choose a GLS ParcelShop'
+                change: 'Choose another ParcelShop'
+                title: 'GLS ParcelShop'
+            locker:
+                select: 'Choose a GLS ParcelLocker'
+                change: 'Choose another locker'
+                title: 'GLS ParcelLocker'
+            cod_card_only: 'Cash on delivery can only be paid by card here, not in cash.'
+            map_unavailable: 'The GLS map cannot be loaded right now. Please try again or choose another shipping method.'

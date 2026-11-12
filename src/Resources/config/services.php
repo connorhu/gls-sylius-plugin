@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
 use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
+use CodeConjure\SyliusGlsPlugin\Cod\PickupPointCashCheck;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
+use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
+use CodeConjure\SyliusGlsPlugin\Pickup\PickupPointValidator;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
+use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Psr18Client;
 
 return static function (ContainerConfigurator $container): void {
@@ -58,4 +64,40 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(GlsExtension::class)
         ->tag('twig.extension');
+
+    // A GLS nyilvános pontlistája (#255): a választott pont neve és címe, a
+    // fajta-ellenőrzés és a készpénz-kérdés forrása. Saját HTTP-kliens, hogy
+    // a host `framework.http_client` beállításától (pl. egy scoped kliens
+    // base_uri-ja) ne függjön; a gyorsítótár a hosté (`cache.app`).
+    $services->set('codeconjure_gls.delivery_points.http_client')
+        ->class(\Symfony\Contracts\HttpClient\HttpClientInterface::class)
+        ->factory([HttpClient::class, 'create']);
+
+    $services->set(DeliveryPointCatalog::class)
+        ->args([
+            service('codeconjure_gls.delivery_points.http_client'),
+            service('cache.app'),
+            service('logger')->nullOnInvalid(),
+            param('codeconjure_gls.api.country'),
+        ])
+        ->tag('monolog.logger', ['channel' => 'gls']);
+
+    $services->set(PickupPointValidator::class)
+        ->args([service(DeliveryPointCatalog::class)]);
+
+    $services->set(PickupPointCashCheck::class)
+        ->args([service(DeliveryPointCatalog::class)]);
+
+    $services->set(CheckoutShipmentTypeExtension::class)
+        ->args([service(PickupPointValidator::class), service('translator')])
+        ->tag('form.type_extension');
+
+    $services->set(GlsRuntime::class)
+        ->args([
+            service(DeliveryPointCatalog::class),
+            service(PickupPointCashCheck::class),
+            service(CodPolicy::class),
+            param('codeconjure_gls.api.country'),
+        ])
+        ->tag('twig.runtime');
 };

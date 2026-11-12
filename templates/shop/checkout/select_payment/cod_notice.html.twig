@@ -1,0 +1,17 @@
+{# Utánvét GLS-ponton: figyelmeztetés a 3. lépés utánvét-kártyáján (#255).
+
+   HOOKABLE a fizetési mód kártyájának részletein
+   (`sylius_shop.shared.form.select_payment.payment.choice.details`) — a
+   kulcs (`gls_cod_notice`) új, tehát a plugin `prepend()`-je beveheti.
+
+   Csak az utánvét kártyáján, és csak ha a rendelés GLS-pontján utánvétnél
+   kártyával lehet fizetni (automata mindig; csomagpont, ha a pontlista
+   szerint nem fogad készpénzt). A rendelés a hook-kontextusból jön; ahol
+   nincs (pl. egy host más helyen rendereli ezt a fát), a figyelmeztetés
+   elmarad, render-hiba nélkül. #}
+{% set method = hookable_metadata.context.method %}
+{% set order = hookable_metadata.context.order is defined ? hookable_metadata.context.order : null %}
+
+{% if gls_is_cash_on_delivery(method) and gls_cod_card_only(order) %}
+    <span class="gls-cod-notice small" data-test-gls-cod-notice>{{ 'codeconjure.gls.pickup_point.cod_card_only'|trans }}</span>
+{% endif %}

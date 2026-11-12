@@ -5,3 +5,14 @@ codeconjure:
                 api: 'MyGLS API'
                 manual: 'Kézi feladás (API nélkül)'
             api_not_configured: 'A MyGLS API beállítása hiányos: %settings%'
+        pickup_point:
+            shop:
+                select: 'GLS csomagpont kiválasztása'
+                change: 'Másik csomagpont választása'
+                title: 'GLS csomagpont'
+            locker:
+                select: 'GLS csomagautomata kiválasztása'
+                change: 'Másik automata választása'
+                title: 'GLS csomagautomata'
+            cod_card_only: 'Utánvétnél itt csak bankkártyával lehet fizetni, készpénzzel nem.'
+            map_unavailable: 'A GLS térképe most nem tölthető be. Próbáld újra, vagy válassz más szállítási módot.'
