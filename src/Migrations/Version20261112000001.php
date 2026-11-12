@@ -55,8 +55,8 @@ final class Version20261112000001 extends AbstractMigration
             handed_over_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL,
             PRIMARY KEY(id)
         )');
-        $this->addSql('CREATE UNIQUE INDEX UNIQ_gls_parcel_shipment ON gls_parcel (shipment_id)');
-        $this->addSql('CREATE UNIQUE INDEX UNIQ_gls_parcel_parcel_id ON gls_parcel (parcel_id)');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_E5FDF6217BE036FC ON gls_parcel (shipment_id)');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_E5FDF621465E670C ON gls_parcel (parcel_id)');
         $this->addSql('CREATE INDEX idx_gls_parcel_status ON gls_parcel (internal_status)');
         $this->addSql('CREATE INDEX idx_gls_parcel_created ON gls_parcel (created_at)');
         $this->addSql('ALTER TABLE gls_parcel ADD CONSTRAINT FK_gls_parcel_shipment

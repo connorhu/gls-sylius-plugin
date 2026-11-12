@@ -167,6 +167,7 @@ felülírhatja, vagy `enabled: false`-szal kikapcsolhatja.
 | `sylius_shop.checkout.select_shipping.content.form.shipments.shipment.carrier_fields` | `gls` | a választó (2. lépés) |
 | `sylius_shop.shared.order.show.summary.addresses.shipping.pickup_point` | `gls` | a választott pont a rendelés-összegzőben |
 | `sylius_shop.shared.form.select_payment.payment.choice.details` | `gls_cod_notice` | utánvét-figyelmeztetés a 3. lépés utánvét-kártyáján |
+| `codeconjure_carrier.admin.order.shipment.ship` | `gls` | az admin feladás-panel (#257, l. a 9. pontot) |
 
 Az összegző hookját (`…addresses.shipping.pickup_point`) a **host sablonja**
 hívja a szállítási blokkban, amikor a szállítmány átvételi pontos — ezt a

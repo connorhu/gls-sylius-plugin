@@ -9,6 +9,7 @@ codeconjure_gls_admin_parcel:
     resource: |
         alias: codeconjure_gls.parcel
         section: admin
+        path: gls-parcels
         only: [index]
         templates: '@CodeConjureSyliusGlsPlugin/admin/parcel'
         grid: codeconjure_gls_admin_parcel

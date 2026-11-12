@@ -289,6 +289,8 @@ final class ContainerCompilationTest extends TestCase
         self::assertSame(['template' => '@CodeConjureSyliusGlsPlugin/shop/checkout/select_shipping/pickup_point_widget.html.twig'], $widget['gls'] ?? null);
         self::assertArrayHasKey('gls', $summary);
         self::assertArrayHasKey('gls_cod_notice', $payment);
+        self::assertIsArray($hooks['codeconjure_carrier.admin.order.shipment.ship'] ?? null);
+        self::assertSame(['template' => '@CodeConjureSyliusGlsPlugin/admin/shipment/ship.html.twig'], $hooks['codeconjure_carrier.admin.order.shipment.ship']['gls'] ?? null);
 
         $bare = new ContainerBuilder();
         (new CodeConjureSyliusGlsExtension())->prepend($bare);
