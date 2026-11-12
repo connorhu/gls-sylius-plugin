@@ -3,7 +3,12 @@
 declare(strict_types=1);
 
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
+use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
+use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
+use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use Sylius\Component\Payment\Resolver\PaymentMethodsResolverInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -30,4 +35,23 @@ return static function (ContainerConfigurator $container): void {
             param('codeconjure_gls.api.country'),
             param('codeconjure_gls.api.webshop_engine'),
         ]);
+
+    $services->set(CodPolicy::class)
+        ->args([
+            param('codeconjure_gls.cod.payment_method_codes'),
+            param('codeconjure_gls.cod.max_amount'),
+            param('codeconjure_gls.cod.international'),
+        ]);
+
+    // Az utánvét kivétele a választékból, ha a GLS nem engedi (#254). A
+    // host saját resolver-dekorátoraival láncba fűzhető: csak elvesz.
+    $services->set(CodPaymentMethodsResolver::class)
+        ->decorate(PaymentMethodsResolverInterface::class)
+        ->args([service('.inner'), service(CodPolicy::class)]);
+
+    $services->set(EligibilityChecker::class)
+        ->args([service(CodPolicy::class)]);
+
+    $services->set(GlsExtension::class)
+        ->tag('twig.extension');
 };

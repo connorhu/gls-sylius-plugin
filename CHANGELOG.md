@@ -7,6 +7,26 @@ visszafelé kompatibilisek.
 
 ## [Nem kiadott]
 
+## [0.2.0] – 2026-11-12
+
+A GLS szállítási fajták, az utánvét-szabály és a feladás előtti
+jogosultság-ellenőrzés (bolt-issue #254).
+
+### Hozzáadva
+
+- `Model\GlsDeliveryKind` — a három GLS fajta (`gls_home_delivery`,
+  `gls_parcel_shop`, `gls_parcel_locker`), a GLS `DeliveryPointType`-jával.
+- `Model\GlsShipmentInterface` és `Model\GlsShippingMethodInterface` — a
+  host entitásainak szerződése, a közös szállító-csomag interfészeire építve.
+- `Cod\CodPolicy` és a `codeconjure_gls.cod` konfiguráció: utánvét mindhárom
+  belföldi módon, 500 000 Ft-os felső határ, külföldre alapból nincs.
+- `Payment\CodPaymentMethodsResolver` — a Sylius fizetésimód-resolver
+  dekorátora: a pénztárban kiveszi az utánvétet, ha a GLS nem engedi.
+- `Eligibility\EligibilityChecker` — feladható-e a szállítmány (csomagpont,
+  címzett neve, telefonja, e-mailje a PSD-hez; házszám házhoz szállításnál;
+  fizetés vagy utánvét-szabály).
+- Twig: `gls_handles_delivery()`, `gls_delivery_kind()`.
+
 ## [0.1.0] – 2026-11-12
 
 A plugin váza, üzleti funkció nélkül.
@@ -26,5 +46,6 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
-[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.1.0...main
+[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.2.0...main
+[0.2.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.2.0
 [0.1.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.1.0

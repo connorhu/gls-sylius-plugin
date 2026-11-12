@@ -69,13 +69,20 @@ codeconjure_gls:
         contact_name: ~
         contact_phone: ~
         contact_email: ~
+    # Az utánvét szabályai GLS-szállítmánynál. A plugin a pénztár fizetési
+    # módjai közül kiveszi az utánvétet, ha a GLS nem engedi (a határ fölött,
+    # vagy külföldre), és a feladás előtti ellenőrzés is ezt használja.
+    cod:
+        payment_method_codes: [cash_on_delivery]   # a bolt utánvétes módjainak kódja
+        max_amount: 50000000    # fillérben: 500 000 Ft (a GLS maxCodAmount-ja)
+        international: false    # külföldre csak, ha a GLS-szerződés adja
     # A termékméretre rászámolt csomagolási ráhagyás (a díjbecsléshez).
     packaging:
         allowance_mm: 0
         allowance_g: 0
 ```
 
-Konténer-paraméterek: `codeconjure_gls.api.*`, `codeconjure_gls.pickup_address`,
+Konténer-paraméterek: `codeconjure_gls.api.*`, `codeconjure_gls.pickup_address`, `codeconjure_gls.cod.*`,
 `codeconjure_gls.packaging.allowance_mm`, `codeconjure_gls.packaging.allowance_g`.
 
 ## 5. Naplózás
@@ -98,7 +105,23 @@ when@prod:
                 channels: [gls]
 ```
 
-## 6. Migrációk
+## 6. A host entitásai
+
+A bolt `Shipment`-je a `CodeConjure\SyliusGlsPlugin\Model\GlsShipmentInterface`-t,
+a `ShippingMethod`-ja a `GlsShippingMethodInterface`-t implementálja. A GLS-fajtát
+a `getDeliveryKindSlug()` adja, a `GlsDeliveryKind` három értékének egyikével:
+
+| Slug | Fajta | Csomagpont? |
+|---|---|---|
+| `gls_home_delivery` | házhoz szállítás | nem |
+| `gls_parcel_shop` | GLS csomagpont | igen |
+| `gls_parcel_locker` | GLS csomagautomata | igen |
+
+A `getDeliveryKindSlug()` ugyanaz a metódus, amit a FoxPost plugin kér, tehát egy
+közös host-enum mindkét szállító fajtáit hordozhatja. Twigben: `gls_handles_delivery(method)`,
+`gls_delivery_kind(method)`.
+
+## 7. Migrációk
 
 A plugin migrációs névtere (`CodeConjure\SyliusGlsPlugin\Migrations`) a
 plugin `prepend()`-jéből regisztrálódik, és a Sylius mag migrációi után fut.
