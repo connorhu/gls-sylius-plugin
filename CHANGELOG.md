@@ -36,6 +36,12 @@ Csomagfeladás, címke és sztornó az adminból, API-val és API nélkül
 - Twig: `gls_api_enabled()`, `gls_parcel_for_shipment()`,
   `gls_parcel_preview()`, `gls_tracking_url()`.
 
+### Változott
+
+- Új futásidejű követelmény: `symfony/workflow ^7.4` — a `gls_parcel`
+  állapotgép backed enumban tárolja a helyét, amit a `MethodMarkingStore` a
+  7.4 óta kezel (régebbin: „could not be converted to string").
+
 ## [0.3.0] – 2026-11-12
 
 A csomagpont- és csomagautomata-választó a pénztárban, és a választott pont
