@@ -61,6 +61,52 @@ final class TranslationNamespaceTest extends TestCase
         }
     }
 
+    /**
+     * Minden sablon szó szerinti kulcsa létezik (a fajtából vagy állapotból
+     * képzett kulcsokat a két külön teszt méri).
+     */
+    public function testEveryLiteralKeyInTheTemplatesExists(): void
+    {
+        $keys = self::keys('messages', 'hu');
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(\dirname(__DIR__, 2) . '/templates', \FilesystemIterator::SKIP_DOTS));
+
+        foreach ($files as $file) {
+            \assert($file instanceof \SplFileInfo);
+            preg_match_all("/'(codeconjure\\.gls\\.[a-z_.]+[a-z_])'\\s*\\|\\s*trans/", (string) file_get_contents($file->getPathname()), $matches);
+
+            foreach ($matches[1] as $key) {
+                self::assertContains($key, $keys, $file->getFilename());
+            }
+        }
+    }
+
+    /** A csomaglista címkéi és szűrő-választékai fordítottak. */
+    public function testEveryGridLabelIsTranslated(): void
+    {
+        $keys = self::keys('messages', 'hu');
+        preg_match_all('/\b(codeconjure\.gls\.[a-z_.]+[a-z_])\b/', (string) file_get_contents(\dirname(__DIR__, 2) . '/src/Resources/config/app/grid.yaml'), $matches);
+
+        self::assertNotSame([], $matches[1]);
+
+        foreach (array_unique($matches[1]) as $key) {
+            self::assertContains($key, $keys);
+        }
+    }
+
+    /** A grid a fajtából és az állapotból képzi a kulcsot. */
+    public function testEveryKindAndStatusIsTranslated(): void
+    {
+        $keys = self::keys('messages', 'hu');
+
+        foreach (\CodeConjure\SyliusGlsPlugin\Model\GlsDeliveryKind::cases() as $kind) {
+            self::assertContains('codeconjure.gls.delivery_kind.' . $kind->value, $keys);
+        }
+
+        foreach (\CodeConjure\SyliusGlsPlugin\Entity\GlsParcelStatus::cases() as $status) {
+            self::assertContains('codeconjure.gls.ui.status.' . $status->value, $keys);
+        }
+    }
+
     /** @return list<string> */
     private static function keys(string $domain, string $locale): array
     {

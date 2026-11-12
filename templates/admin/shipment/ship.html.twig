@@ -1,0 +1,113 @@
+{# A GLS feladás-panel az admin rendelés-oldal szállítmány-paneljén (#257).
+
+   HOOKABLE a közös `codeconjure/sylius-carrier-bundle` admin-hookján
+   (`codeconjure_carrier.admin.order.shipment.ship`). Csak GLS-szállítmánynál
+   rajzol — más szállítmánynál üres, és a közös sablon a többi szállítóra,
+   végül a Sylius alapgombjára esik vissza.
+
+   API-módban: feladás (súly, darabszám) → címke → átadás, közben sztornó.
+   API nélkül (#253): a GLS felületére átviendő adatok másolható formában, és
+   a nyomkövetési szám kézi rögzítése, amitől a szállítmány kiszállítva. #}
+{% import _self as gls %}
+{% set shipment = hookable_metadata.context.resource %}
+{% set attributes = hookable_metadata.context.attributes ?? '' %}
+
+{% if gls_handles_delivery(shipment) and sylius_sm_can(shipment, 'sylius_shipment', 'ship') %}
+    {% set parcel = gls_parcel_for_shipment(shipment) %}
+    {% set status = parcel is not null ? parcel.internalStatus : null %}
+    {% set token = csrf_token('gls_parcel') %}
+
+    <div {{ attributes }} class="gls-ship" data-test-gls-ship>
+        {% if parcel is not null and parcel.lastApiError %}
+            <div class="alert alert-danger py-1 px-2 mb-2 small" data-test-gls-error>{{ parcel.lastApiError }}</div>
+        {% endif %}
+
+        {% if gls_api_enabled() %}
+            {% if status is null or status.isRegistrable %}
+                <form method="post" action="{{ path('codeconjure_gls_admin_parcel_register', {shipmentId: shipment.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
+                    <input type="hidden" name="_csrf_token" value="{{ token }}">
+                    {{ gls.size_fields() }}
+                    <button type="submit" class="btn" {{ sylius_test_html_attribute('shipment-ship-button') }}>
+                        {{ ux_icon('tabler:truck') }} {{ 'codeconjure.gls.ui.register'|trans }}
+                    </button>
+                </form>
+            {% else %}
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="badge" data-test-gls-status="{{ status.value }}">{{ ('codeconjure.gls.ui.status.' ~ status.value)|trans }}</span>
+                    {% if parcel.parcelNumber %}<span class="badge">{{ parcel.parcelNumber }}</span>{% endif %}
+
+                    {% if status.hasLabel %}
+                        <a href="{{ path('codeconjure_gls_admin_parcel_label', {id: parcel.id}) }}" class="btn btn-sm" target="_blank">
+                            {{ ux_icon('tabler:file-type-pdf') }} {{ 'codeconjure.gls.ui.label'|trans }}
+                        </a>
+                    {% endif %}
+
+                    {% if status.value == 'label_ready' %}
+                        <form method="post" action="{{ path('codeconjure_gls_admin_parcel_hand_over', {id: parcel.id}) }}">
+                            <input type="hidden" name="_csrf_token" value="{{ token }}">
+                            <button type="submit" class="btn btn-sm btn-success" {{ sylius_test_html_attribute('shipment-ship-button') }}>{{ 'codeconjure.gls.ui.hand_over'|trans }}</button>
+                        </form>
+                    {% endif %}
+
+                    {% if status.isCancellable %}
+                        <form method="post" action="{{ path('codeconjure_gls_admin_parcel_cancel', {id: parcel.id}) }}">
+                            <input type="hidden" name="_csrf_token" value="{{ token }}">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('{{ 'codeconjure.gls.ui.cancel_confirm'|trans|e('js') }}')">{{ 'codeconjure.gls.ui.cancel'|trans }}</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            {% set preview = gls_parcel_preview(shipment) %}
+            <div class="small mb-2" data-test-gls-manual>
+                <strong>{{ 'codeconjure.gls.ui.manual_title'|trans }}</strong>
+                <p class="text-muted mb-1">{{ 'codeconjure.gls.ui.manual_help'|trans }}</p>
+                {% if preview is not null %}
+                    <dl class="row mb-0">
+                        {{ gls.row('codeconjure.gls.ui.reference', preview.orderNumber) }}
+                        {{ gls.row('codeconjure.gls.ui.recipient', preview.recipientName) }}
+                        {{ gls.row('codeconjure.gls.ui.phone', preview.recipientPhone) }}
+                        {{ gls.row('codeconjure.gls.ui.email', preview.recipientEmail) }}
+                        {% if preview.pickupPointId %}
+                            {% set point = gls_pickup_point(preview.pickupPointId) %}
+                            {{ gls.row('codeconjure.gls.ui.pickup_point', preview.pickupPointId ~ (point ? ' — ' ~ point.name : '')) }}
+                        {% else %}
+                            {{ gls.row('codeconjure.gls.ui.address', [preview.zipCode, preview.city, preview.street, preview.houseNumber, preview.houseNumberInfo]|filter(v => v)|join(' ')) }}
+                        {% endif %}
+                        {% if preview.codAmount is not null %}
+                            {{ gls.row('codeconjure.gls.ui.cod', preview.codAmount ~ ' Ft') }}
+                        {% endif %}
+                    </dl>
+                {% endif %}
+            </div>
+            <form method="post" action="{{ path('codeconjure_gls_admin_parcel_manual_hand_over', {shipmentId: shipment.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
+                <input type="hidden" name="_csrf_token" value="{{ token }}">
+                <label class="form-label mb-0">
+                    {{ 'codeconjure.gls.ui.tracking_number'|trans }}
+                    <input type="text" name="tracking_number" class="form-control form-control-sm" required inputmode="numeric" data-test-gls-tracking-number>
+                </label>
+                {{ gls.size_fields() }}
+                <button type="submit" class="btn" {{ sylius_test_html_attribute('shipment-ship-button') }}>
+                    {{ ux_icon('tabler:truck') }} {{ 'codeconjure.gls.ui.manual_hand_over'|trans }}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% macro size_fields() %}
+    <label class="form-label mb-0">
+        {{ 'codeconjure.gls.ui.weight'|trans }}
+        <input type="text" name="weight" class="form-control form-control-sm" inputmode="decimal" size="5">
+    </label>
+    <label class="form-label mb-0">
+        {{ 'codeconjure.gls.ui.count'|trans }}
+        <input type="number" name="count" class="form-control form-control-sm" value="1" min="1" max="99">
+    </label>
+{% endmacro %}
+
+{% macro row(label, value) %}
+    <dt class="col-4">{{ label|trans }}</dt>
+    <dd class="col-8 mb-0"><span class="user-select-all">{{ value ?: '—' }}</span></dd>
+{% endmacro %}

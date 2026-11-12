@@ -1,0 +1,21 @@
+# A GLS plugin MINDEN admin route-ja ebből az egy fájlból (#257); a befogadó
+# bolt egyetlen importja (l. docs/installation.md).
+#
+# Az előtag mindkét blokkon ugyanaz a `/%sylius_admin.path_name%` — a Sylius
+# admin tűzfala is erre a paraméterre épül, így a műveletek egy nem
+# alapértelmezett admin-útvonalú boltban sem esnek ki a tűzfalból (a FoxPost
+# plugin #209-es tanulsága). A controller `#[Route]`-ja ezért nem ír `/admin`-t.
+codeconjure_gls_admin_parcel:
+    resource: |
+        alias: codeconjure_gls.parcel
+        section: admin
+        only: [index]
+        templates: '@CodeConjureSyliusGlsPlugin/admin/parcel'
+        grid: codeconjure_gls_admin_parcel
+    type: sylius.resource
+    prefix: '/%sylius_admin.path_name%'
+
+codeconjure_gls_admin_controllers:
+    resource: '@CodeConjureSyliusGlsPlugin/src/Controller/'
+    type: attribute
+    prefix: '/%sylius_admin.path_name%'

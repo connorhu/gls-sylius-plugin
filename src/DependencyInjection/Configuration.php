@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CodeConjure\SyliusGlsPlugin\DependencyInjection;
 
 use CodeConjure\Gls\Country;
+use CodeConjure\Gls\LabelFormat;
 use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
@@ -80,6 +81,25 @@ final class Configuration implements ConfigurationInterface
                             ->info('Van-e utánvét külföldre — csak ha a GLS-szerződés adja (az ecsomag nem).')
                             ->defaultFalse()
                         ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('label')
+                    ->info('A címke-PDF (#257, #263) — csak API-módban.')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->enumNode('format')
+                            ->info('A MyGLS TypeOfPrinter: A4_2x2 (4 db A6 egy A4-en), A4_4x1, vagy hőnyomtató.')
+                            ->values(array_map(static fn (LabelFormat $format): string => $format->value, LabelFormat::cases()))
+                            ->defaultValue(LabelFormat::A4_2x2->value)
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('notifications')
+                    ->info('A GLS értesítései a címzettnek (#260): FDS (e-mail), FSS (SMS, csak FDS-sel). Alapból ki.')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('email')->defaultFalse()->end()
+                        ->booleanNode('sms')->defaultFalse()->end()
                     ->end()
                 ->end()
                 ->arrayNode('packaging')

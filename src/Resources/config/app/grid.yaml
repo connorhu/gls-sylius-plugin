@@ -1,0 +1,95 @@
+# A GLS csomaglista (#257). Az enum mezők (`deliveryKind`, `internalStatus`)
+# `type: twig` mezők: a grid `string` típusa `(string)`-gel castolna, ami egy
+# backed enumon `Error`-t dob (a FoxPost plugin #185-ös tanulsága).
+#
+# Az akciók SAJÁT típusnévvel és sablon-regisztrációval mennek: a Sylius
+# akció-renderelője az `options.template` kulcsot nem olvassa (FoxPost #198).
+sylius_grid:
+    templates:
+        action:
+            gls_label: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_label_action.html.twig'
+            gls_cancel: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_cancel_action.html.twig'
+        bulk_action:
+            gls_bulk_label: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_bulk_label_action.html.twig'
+            gls_bulk_cancel: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_bulk_cancel_action.html.twig'
+    grids:
+        codeconjure_gls_admin_parcel:
+            driver:
+                name: doctrine/orm
+                options:
+                    class: CodeConjure\SyliusGlsPlugin\Entity\GlsParcel
+                    repository:
+                        method: createAdminGridQueryBuilder
+            sorting:
+                createdAt: desc
+            fields:
+                orderNumber:
+                    type: string
+                    label: codeconjure.gls.ui.order_number
+                    sortable: ~
+                parcelNumber:
+                    type: string
+                    label: codeconjure.gls.ui.parcel_number
+                    sortable: ~
+                deliveryKind:
+                    type: twig
+                    label: codeconjure.gls.ui.delivery_kind
+                    options:
+                        template: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_delivery_kind.html.twig'
+                internalStatus:
+                    type: twig
+                    label: codeconjure.gls.ui.status_label
+                    sortable: ~
+                    options:
+                        template: '@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_status.html.twig'
+                manual:
+                    type: twig
+                    label: codeconjure.gls.ui.manual
+                    options:
+                        template: '@SyliusUi/grid/field/yes_no.html.twig'
+                createdAt:
+                    type: datetime
+                    label: sylius.ui.created_at
+                    sortable: ~
+            filters:
+                orderNumber:
+                    type: string
+                    label: codeconjure.gls.ui.order_number
+                    options:
+                        fields: [orderNumber]
+                parcelNumber:
+                    type: string
+                    label: codeconjure.gls.ui.parcel_number
+                    options:
+                        fields: [parcelNumber]
+                internalStatus:
+                    type: select
+                    label: codeconjure.gls.ui.status_label
+                    form_options:
+                        multiple: true
+                        choices:
+                            codeconjure.gls.ui.status.eligible: eligible
+                            codeconjure.gls.ui.status.registration_failed: registration_failed
+                            codeconjure.gls.ui.status.registered: registered
+                            codeconjure.gls.ui.status.label_ready: label_ready
+                            codeconjure.gls.ui.status.handed_over: handed_over
+                            codeconjure.gls.ui.status.in_transit: in_transit
+                            codeconjure.gls.ui.status.delivered: delivered
+                            codeconjure.gls.ui.status.delivery_failed: delivery_failed
+                            codeconjure.gls.ui.status.returned: returned
+                            codeconjure.gls.ui.status.cancelled: cancelled
+            actions:
+                item:
+                    label:
+                        type: gls_label
+                        label: codeconjure.gls.ui.label
+                    cancel:
+                        type: gls_cancel
+                        label: codeconjure.gls.ui.cancel
+                bulk:
+                    label:
+                        type: gls_bulk_label
+                        label: codeconjure.gls.ui.bulk_label
+                    cancel:
+                        type: gls_bulk_cancel
+                        label: codeconjure.gls.ui.bulk_cancel
