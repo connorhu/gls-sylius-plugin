@@ -21,6 +21,12 @@ use Sylius\Component\Payment\Resolver\PaymentMethodsResolverInterface;
  */
 final readonly class CodPaymentMethodsResolver implements PaymentMethodsResolverInterface
 {
+    /**
+     * A dekorált Sylius-service. A konkrét id, nem az interfész-alias — l. a
+     * services.php indoklását.
+     */
+    public const string DECORATED_SERVICE = 'sylius.resolver.payment_methods';
+
     public function __construct(
         private PaymentMethodsResolverInterface $inner,
         private CodPolicy $policy,

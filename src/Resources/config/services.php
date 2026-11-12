@@ -8,7 +8,6 @@ use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use Nyholm\Psr7\Factory\Psr17Factory;
-use Sylius\Component\Payment\Resolver\PaymentMethodsResolverInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -44,9 +43,14 @@ return static function (ContainerConfigurator $container): void {
         ]);
 
     // Az utánvét kivétele a választékból, ha a GLS nem engedi (#254). A
-    // host saját resolver-dekorátoraival láncba fűzhető: csak elvesz.
+    // KONKRÉT `sylius.resolver.payment_methods` id-t dekorálja, NEM az
+    // interfész-aliast: a Sylius fogyasztói (a pénztár fizetésimód-űrlapja,
+    // a Twig-függvény, az API) az id-t kapják, és egy alias dekorálása csak
+    // az aliast irányítja át — a szűrő az ő útjukon némán kimaradna (mérve
+    // a befogadó boltban, 2026-11-12). A host saját dekorátoraival
+    // láncba fűzhető: csak elvesz a listából.
     $services->set(CodPaymentMethodsResolver::class)
-        ->decorate(PaymentMethodsResolverInterface::class)
+        ->decorate(CodPaymentMethodsResolver::DECORATED_SERVICE)
         ->args([service('.inner'), service(CodPolicy::class)]);
 
     $services->set(EligibilityChecker::class)

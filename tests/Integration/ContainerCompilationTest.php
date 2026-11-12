@@ -14,7 +14,6 @@ use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\EmptyPaymentMethodsResolver;
 use PHPUnit\Framework\TestCase;
-use Sylius\Component\Payment\Resolver\PaymentMethodsResolverInterface;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
@@ -107,14 +106,16 @@ final class ContainerCompilationTest extends TestCase
     }
 
     /**
-     * Az utánvét-szűrő a Sylius fizetésimód-resolverét dekorálja — a host
-     * saját dekorátoraival együtt, a lánc bármelyik pontján.
+     * Az utánvét-szűrő a KONKRÉT `sylius.resolver.payment_methods` id-t
+     * dekorálja. Az interfész-alias dekorálása csak az aliast irányítaná át,
+     * a Sylius fogyasztói (pénztár-űrlap, Twig, API) viszont az id-t kapják —
+     * a szűrő az ő útjukon kimaradna.
      */
-    public function testTheCodFilterDecoratesThePaymentMethodsResolver(): void
+    public function testTheCodFilterDecoratesTheConcretePaymentMethodsResolverId(): void
     {
         $definition = $this->builder([])->getDefinition(CodPaymentMethodsResolver::class);
 
-        self::assertSame(PaymentMethodsResolverInterface::class, $definition->getDecoratedService()[0] ?? null);
+        self::assertSame('sylius.resolver.payment_methods', $definition->getDecoratedService()[0] ?? null);
     }
 
     public function testTheCodPolicyIsConfigurable(): void
@@ -197,7 +198,7 @@ final class ContainerCompilationTest extends TestCase
         $container->setParameter('kernel.project_dir', sys_get_temp_dir());
 
         // A dekorált Sylius-resolver a HOST-ban él; itt egy helyettes áll a helyén.
-        $container->register(PaymentMethodsResolverInterface::class, EmptyPaymentMethodsResolver::class);
+        $container->register(CodPaymentMethodsResolver::DECORATED_SERVICE, EmptyPaymentMethodsResolver::class);
 
         (new CodeConjureSyliusGlsExtension())->load([$config], $container);
 
