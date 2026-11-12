@@ -1,0 +1,86 @@
+name: CI
+
+on:
+    push: ~
+    pull_request: ~
+    workflow_dispatch: ~
+
+permissions:
+    contents: read
+
+jobs:
+    checks:
+        name: "Tesztek és statikus ellenőrzés (PHP ${{ matrix.php }}, Sylius ${{ matrix.sylius }})"
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                # A `sylius/sylius: ^2.1` friss feloldásban a 2.3-as sort is
+                # megengedi (Symfony 8, DBAL 4). A plugin PHP-alapú service-
+                # konfigot használ, de a támogatott sort a szállító-pluginokkal
+                # együtt mérjük (FoxPost #205): 2.1 alsó határ, 2.2 a befogadó
+                # bolt sora.
+                include:
+                    - php: '8.4'
+                      sylius: '~2.1.0'
+                    - php: '8.4'
+                      sylius: '~2.2.0'
+                    - php: '8.5'
+                      sylius: '~2.2.0'
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  coverage: none
+
+            # A vendor előtt fut: a manifest érvényessége nem igényel telepítést.
+            - name: A composer.json érvényessége
+              run: composer validate --strict
+
+            # `highest` → `composer update`, ami a `--with` constraintet elfogadja.
+            # A `codeconjure/*` csomagok a Packagistról jönnek: SZÁNDÉKOSAN nincs
+            # `path` repository, attól egy szomszédos klón nélküli gépen a
+            # `composer update` el sem indulna.
+            - uses: ramsey/composer-install@v3
+              with:
+                  dependency-versions: highest
+                  composer-options: "--with sylius/sylius:${{ matrix.sylius }}"
+
+            - name: A feloldott kulcsverziók
+              run: composer show --no-ansi | grep -E '^(codeconjure/|sylius/sylius |symfony/dependency-injection )'
+
+            - name: Unit tesztek
+              run: vendor/bin/phpunit
+
+            - name: PHPStan
+              run: vendor/bin/phpstan analyse -c phpstan.dist.neon --no-progress
+
+            - name: ECS
+              run: vendor/bin/ecs check --no-progress-bar
+
+    lowest:
+        name: "A legalacsonyabb függőségek (PHP 8.4)"
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  coverage: none
+
+            - name: A composer.json érvényessége
+              run: composer validate --strict
+
+            - uses: ramsey/composer-install@v3
+              with:
+                  dependency-versions: lowest
+
+            # Csak a tesztek: a `--prefer-lowest` a fejlesztői eszközöket is a
+            # legrégebbi verzióra húzza (ECS, PHPStan), ami nem a csomag
+            # kódjáról szóló bukást ad. A kérdés itt a DEKLARÁLT futásidejű
+            # alsó határok — erre a tesztkészlet a bizonyíték.
+            - name: Unit tesztek
+              run: vendor/bin/phpunit

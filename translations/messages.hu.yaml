@@ -1,0 +1,7 @@
+codeconjure:
+    gls:
+        ui:
+            api_mode:
+                api: 'MyGLS API'
+                manual: 'Kézi feladás (API nélkül)'
+            api_not_configured: 'A MyGLS API beállítása hiányos: %settings%'

@@ -1,0 +1,7 @@
+codeconjure:
+    gls:
+        ui:
+            api_mode:
+                api: 'MyGLS API'
+                manual: 'Manual hand-over (no API)'
+            api_not_configured: 'The MyGLS API configuration is incomplete: %settings%'
