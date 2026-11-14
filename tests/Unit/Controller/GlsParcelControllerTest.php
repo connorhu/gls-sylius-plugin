@@ -103,6 +103,19 @@ final class GlsParcelControllerTest extends TestCase
         self::assertSame('5001', $parcel->getParcelNumber());
     }
 
+    /** A tömeges címke a kezdőpozíciót az űrlap-törzsből kapja (#263). */
+    public function testTheBulkLabelStartsAtTheChosenPosition(): void
+    {
+        $this->parcel(1, GlsParcelStatus::Registered, 42);
+        $this->parcel(2, GlsParcelStatus::Registered, 43);
+        $this->gls->queue(['Labels' => array_values(unpack('C*', '%PDF') ?: []), 'PrintDataInfoList' => [], 'GetPrintedLabelsErrorList' => []]);
+
+        $response = $this->controller()->bulkLabel(Request::create('/x', 'POST', ['_csrf_token' => 'jo', 'ids' => ['1', '2'], 'print_position' => '2']));
+
+        self::assertSame('application/pdf', $response->headers->get('Content-Type'));
+        self::assertSame(2, $this->gls->value(0, 'PrintPosition'));
+    }
+
     /**
      * A tömeges sztornó a kijelölt SOROK (csomagok) azonosítóit kapja; a nem
      * sztornózható csomag kihagyott, nem hiba, és nem megy rá API-hívás.

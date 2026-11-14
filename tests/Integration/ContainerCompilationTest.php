@@ -139,6 +139,14 @@ final class ContainerCompilationTest extends TestCase
         self::assertFalse($container->getParameter('codeconjure_gls.notifications.sms'));
     }
 
+    /** A címke-sablonok a formátumból döntik el, kell-e kezdőpozíció-választó (#263). */
+    public function testTheTwigRuntimeKnowsTheLabelFormat(): void
+    {
+        $arguments = $this->builder([])->getDefinition(\CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime::class)->getArguments();
+
+        self::assertSame('%codeconjure_gls.label.format%', end($arguments));
+    }
+
     public function testTheLabelFormatIsValidated(): void
     {
         $this->expectException(\Symfony\Component\Config\Definition\Exception\InvalidConfigurationException::class);

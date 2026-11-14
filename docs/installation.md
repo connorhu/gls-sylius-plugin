@@ -263,7 +263,15 @@ codeconjure_gls:
 ```
 
 A címke nyomtatásakor a `print_position` (1–4) adja meg, hányadik negyeden
-kezdődjön egy részben elhasznált A4-es lap.
+kezdődjön egy részben elhasznált A4-es lap. Az admin ezt minden címke-gomb
+mellett megkérdezi (a feladó-panelen, a csomaglista soraiban és a tömeges
+címkenyomtatásnál), alapból az 1.-t; a negyedek neve az elrendezést követi
+(2×2: bal felső → jobb alsó; 4×1: felülről lefelé). Hőnyomtatónál nincs lap,
+a választó nem jelenik meg.
+
+**A címkés lap:** a GLS-címke kb. A6 (105×148 mm), és a GLS csak 4 címkés
+A4-es elrendezést ad (`A4_2x2`, `A4_4x1`) — 8 címkés (2×4) lapra nem
+nyomtatható átméretezés nélkül. 2×2-höz A4-es, 4 db A6-os etikettlap kell.
 
 ### Az utca és a házszám
 

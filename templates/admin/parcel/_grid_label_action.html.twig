@@ -1,4 +1,8 @@
-{# Címke (újra)nyomtatása — csak a MyGLS-ben feladott csomagnak van. #}
+{# Címke (újra)nyomtatása — csak a MyGLS-ben feladott csomagnak van. A
+   kezdőpozíció (#263) GET-paraméter, a PDF új lapon nyílik. #}
 {% if data.parcelId is not null and data.internalStatus.hasLabel %}
-    <a href="{{ path('codeconjure_gls_admin_parcel_label', {id: data.id}) }}" class="btn" target="_blank">{{ action.label|trans }}</a>
+    <form method="get" action="{{ path('codeconjure_gls_admin_parcel_label', {id: data.id}) }}" target="_blank" class="d-inline-flex gap-1">
+        {% include '@CodeConjureSyliusGlsPlugin/admin/parcel/_print_position.html.twig' %}
+        <button type="submit" class="btn">{{ action.label|trans }}</button>
+    </form>
 {% endif %}

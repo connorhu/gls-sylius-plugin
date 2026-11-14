@@ -1,7 +1,9 @@
 {# A kijelölt sorok (GlsParcel-ek) azonosítóit a Sylius admin generikus
    tömeges mechanizmusa csatolja `ids[]`-ként a `data-bulk-delete="index"`
-   formhoz (a `bulk-delete.js`; a csoportnév a Sylius táblázat-helperéé). #}
-<form method="post" action="{{ path('codeconjure_gls_admin_parcel_bulk_label') }}" data-bulk-delete="index">
+   formhoz (a `bulk-delete.js`; a csoportnév a Sylius táblázat-helperéé).
+   A kezdőpozíció (#263) a form saját mezője. #}
+<form method="post" action="{{ path('codeconjure_gls_admin_parcel_bulk_label') }}" data-bulk-delete="index" class="d-inline-flex gap-1">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token('gls_parcel') }}">
+    {% include '@CodeConjureSyliusGlsPlugin/admin/parcel/_print_position.html.twig' %}
     <button type="submit" class="btn">{{ action.label|trans }}</button>
 </form>

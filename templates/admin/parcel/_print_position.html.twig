@@ -1,0 +1,15 @@
+{# A címkés lap kezdőpozíciója (#263): A4-es formátumnál a GLS
+   `PrintPosition`-je (1–4) adja, hányadik negyeden kezdődjön a nyomtatás —
+   így egy részben elhasznált lap is újra betehető. A negyedek neve az
+   elrendezéstől függ (2×2: bal/jobb felső/alsó; 4×1: felülről). Hőnyomtatónál
+   nincs lap: a választó el sem készül, és a controller 1-et küld. #}
+{% set positions = gls_label_print_positions() %}
+{% if positions is not empty %}
+    {% set format = gls_label_format() %}
+    <select name="print_position" class="form-select form-select-sm w-auto" data-test-gls-print-position
+            aria-label="{{ 'codeconjure.gls.ui.print_position.label'|trans }}" title="{{ 'codeconjure.gls.ui.print_position.label'|trans }}">
+        {% for position in positions %}
+            <option value="{{ position }}"{% if loop.first %} selected{% endif %}>{{ ('codeconjure.gls.ui.print_position.' ~ format ~ '.' ~ position)|trans }}</option>
+        {% endfor %}
+    </select>
+{% endif %}
