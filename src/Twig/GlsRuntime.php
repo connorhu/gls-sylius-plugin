@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CodeConjure\SyliusGlsPlugin\Twig;
 
+use CodeConjure\Gls\LabelFormat;
 use CodeConjure\SyliusGlsPlugin\Api\ApiAccess;
 use CodeConjure\SyliusGlsPlugin\Cod\CodPolicy;
 use CodeConjure\SyliusGlsPlugin\Cod\PickupPointCashCheck;
@@ -42,7 +43,25 @@ final readonly class GlsRuntime implements RuntimeExtensionInterface
         private ?GlsParcelPayloadFactory $payloadFactory = null,
         private ?ParcelEstimator $estimator = null,
         private ?GlsShippingCalculator $calculator = null,
+        private string $labelFormat = LabelFormat::A4_2x2->value,
     ) {
+    }
+
+    /** A címke formátuma (`codeconjure_gls.label.format`, a MyGLS `TypeOfPrinter`-e). */
+    public function labelFormat(): string
+    {
+        return $this->labelFormat;
+    }
+
+    /**
+     * A választható kezdőpozíciók a címkés lapon (#263): A4-es formátumnál
+     * 1–4 (a GLS `PrintPosition`-je), hőnyomtatónál nincs lap, tehát üres.
+     *
+     * @return list<int>
+     */
+    public function labelPrintPositions(): array
+    {
+        return LabelFormat::tryFrom($this->labelFormat)?->isA4() === true ? [1, 2, 3, 4] : [];
     }
 
     /** API-módban fut-e a plugin (a hiányos beállítás NEM az). */

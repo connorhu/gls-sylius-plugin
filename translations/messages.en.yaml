@@ -13,6 +13,18 @@ codeconjure:
             label: 'Label'
             cancel: 'Cancel'
             bulk_label: 'Print labels'
+            print_position:
+                label: 'Start on the sheet at'
+                A4_2x2:
+                    1: '1 – top left'
+                    2: '2 – top right'
+                    3: '3 – bottom left'
+                    4: '4 – bottom right'
+                A4_4x1:
+                    1: '1 – top'
+                    2: '2 – second from the top'
+                    3: '3 – third from the top'
+                    4: '4 – bottom'
             bulk_cancel: 'Cancel'
             cancel_confirm: 'Do you really want to cancel the GLS parcel?'
             register: 'Send with GLS'

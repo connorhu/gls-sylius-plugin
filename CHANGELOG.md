@@ -5,6 +5,23 @@ sor azt jelenti, hogy a nyilvános API még mozog: egy `0.y.z` → `0.(y+1).0`
 váltás törő változást is tartalmazhat, a javító kiadások viszont
 visszafelé kompatibilisek.
 
+## [Nem kiadott]
+
+A címkés lap kezdőpozíciója (bolt-issue #263).
+
+### Hozzáadva
+
+- Kezdőpozíció-választó (1–4, a MyGLS `PrintPosition`-je) minden
+  címke-gomb mellett: az admin feladó-panelen, a csomaglista soraiban és a
+  tömeges címkenyomtatásnál. A negyedek neve az elrendezést követi (2×2 vagy
+  4×1); hőnyomtató-formátumnál a választó nem jelenik meg.
+- Twig: `gls_label_format()`, `gls_label_print_positions()`.
+
+### Változott
+
+- A címke-gomb a feladó-panelen és a csomaglistán link helyett GET-űrlap
+  (új lapon nyíló PDF), hogy a kezdőpozíciót is elküldje.
+
 ## [0.6.0] – 2026-11-14
 
 A díjszámítás a GLS kalkulátorának képletével (bolt-issue #260).
@@ -148,6 +165,7 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
+[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.6.0...main
 [0.6.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.6.0
 [0.5.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.5.0
 [0.4.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.4.0

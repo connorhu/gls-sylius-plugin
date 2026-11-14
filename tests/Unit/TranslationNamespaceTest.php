@@ -118,6 +118,25 @@ final class TranslationNamespaceTest extends TestCase
         }
     }
 
+    /** A címkés lap kezdőpozíciójának neve formátumonként képződik (#263). */
+    public function testEveryLabelPrintPositionIsTranslated(): void
+    {
+        foreach (['hu', 'en'] as $locale) {
+            $keys = self::keys('messages', $locale);
+            self::assertContains('codeconjure.gls.ui.print_position.label', $keys);
+
+            foreach (\CodeConjure\Gls\LabelFormat::cases() as $format) {
+                if (!$format->isA4()) {
+                    continue;
+                }
+
+                foreach ([1, 2, 3, 4] as $position) {
+                    self::assertContains(\sprintf('codeconjure.gls.ui.print_position.%s.%d', $format->value, $position), $keys, $locale);
+                }
+            }
+        }
+    }
+
     /** @return list<string> */
     private static function keys(string $domain, string $locale): array
     {

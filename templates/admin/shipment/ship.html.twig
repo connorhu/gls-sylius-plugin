@@ -41,9 +41,11 @@
                     {% if parcel.parcelNumber %}<span class="badge">{{ parcel.parcelNumber }}</span>{% endif %}
 
                     {% if status.hasLabel %}
-                        <a href="{{ path('codeconjure_gls_admin_parcel_label', {id: parcel.id}) }}" class="btn btn-sm" target="_blank">
-                            {{ ux_icon('tabler:file-type-pdf') }} {{ 'codeconjure.gls.ui.label'|trans }}
-                        </a>
+                        {# A kezdőpozíció a címkés lapon (#263) — GET, a PDF új lapon. #}
+                        <form method="get" action="{{ path('codeconjure_gls_admin_parcel_label', {id: parcel.id}) }}" target="_blank" class="d-inline-flex gap-1">
+                            {% include '@CodeConjureSyliusGlsPlugin/admin/parcel/_print_position.html.twig' %}
+                            <button type="submit" class="btn btn-sm">{{ ux_icon('tabler:file-type-pdf') }} {{ 'codeconjure.gls.ui.label'|trans }}</button>
+                        </form>
                     {% endif %}
 
                     {% if status.value == 'label_ready' %}

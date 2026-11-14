@@ -117,6 +117,7 @@ return static function (ContainerConfigurator $container): void {
             service(GlsParcelPayloadFactory::class),
             service(ParcelEstimator::class),
             service(GlsShippingCalculator::class),
+            param('codeconjure_gls.label.format'),
         ])
         ->tag('twig.runtime');
 

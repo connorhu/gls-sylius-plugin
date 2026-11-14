@@ -67,7 +67,7 @@ final class AdminTemplateRenderTest extends TestCase
         $page = $this->ship($shipment);
 
         self::assertSame('registered', $page->filter('[data-test-gls-status]')->attr('data-test-gls-status'));
-        self::assertSame(1, $page->filter('a[href^="route:codeconjure_gls_admin_parcel_label"]')->count());
+        self::assertSame(1, $page->filter('form[action^="route:codeconjure_gls_admin_parcel_label"][method="get"][target="_blank"]')->count());
         self::assertSame(1, $page->filter('form[action^="route:codeconjure_gls_admin_parcel_cancel"]')->count());
         self::assertSame(0, $page->filter('form[action^="route:codeconjure_gls_admin_parcel_hand_over"]')->count(), 'Címke nélkül nincs átadás.');
     }
@@ -137,6 +137,60 @@ final class AdminTemplateRenderTest extends TestCase
         self::assertSame('1', $page->filter('input[name="count"]')->attr('value'));
     }
 
+    /**
+     * A4-es lapnál a GLS `PrintPosition`-je (1–4) adja, hányadik negyeden
+     * kezdődjön a nyomtatás — egy részben elhasznált lap így újra betehető
+     * (#263). A választó a címke-gomb mellett áll, alapból az 1.
+     */
+    public function testTheLabelAsksWhereToStartOnTheSheet(): void
+    {
+        $shipment = $this->shipment();
+        $this->parcel = $this->parcelOf($shipment, GlsParcelStatus::Registered);
+        $form = $this->ship($shipment)->filter('form[action^="route:codeconjure_gls_admin_parcel_label"]');
+
+        self::assertSame(['1', '2', '3', '4'], $form->filter('select[name="print_position"] option')->each(static fn (Crawler $o): string => (string) $o->attr('value')));
+        self::assertSame('1', $form->filter('select[name="print_position"] option[selected]')->attr('value'));
+        self::assertSame('codeconjure.gls.ui.print_position.A4_2x2.4', trim($form->filter('option')->last()->text()));
+    }
+
+    public function testTheStripLayoutNamesItsPositionsFromTheTop(): void
+    {
+        $shipment = $this->shipment();
+        $this->parcel = $this->parcelOf($shipment, GlsParcelStatus::Registered);
+        $form = $this->ship($shipment, labelFormat: 'A4_4x1')->filter('form[action^="route:codeconjure_gls_admin_parcel_label"]');
+
+        self::assertSame('codeconjure.gls.ui.print_position.A4_4x1.1', trim($form->filter('option')->first()->text()));
+    }
+
+    /** Hőnyomtatónál nincs lap, tehát nincs mit kérdezni. */
+    public function testAThermoPrinterGetsNoPositionChoice(): void
+    {
+        $shipment = $this->shipment();
+        $this->parcel = $this->parcelOf($shipment, GlsParcelStatus::Registered);
+        $page = $this->ship($shipment, labelFormat: 'Thermo');
+
+        self::assertSame(1, $page->filter('form[action^="route:codeconjure_gls_admin_parcel_label"]')->count());
+        self::assertSame(0, $page->filter('select[name="print_position"]')->count());
+    }
+
+    public function testTheParcelListLabelActionAsksToo(): void
+    {
+        $shipment = $this->shipment();
+        $parcel = $this->parcelOf($shipment, GlsParcelStatus::Registered);
+        $page = new Crawler($this->twig(true)->render('@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_label_action.html.twig', ['data' => $parcel, 'action' => ['label' => 'codeconjure.gls.ui.label']]));
+
+        $form = $page->filter('form[action^="route:codeconjure_gls_admin_parcel_label"][method="get"][target="_blank"]');
+        self::assertSame(1, $form->count());
+        self::assertSame(4, $form->filter('select[name="print_position"] option')->count());
+    }
+
+    public function testTheBulkLabelActionAsksToo(): void
+    {
+        $page = new Crawler($this->twig(true)->render('@CodeConjureSyliusGlsPlugin/admin/parcel/_grid_bulk_label_action.html.twig', ['action' => ['label' => 'codeconjure.gls.ui.bulk_label']]));
+
+        self::assertSame(4, $page->filter('form[action^="route:codeconjure_gls_admin_parcel_bulk_label"] select[name="print_position"] option')->count());
+    }
+
     public function testOtherCarriersAndShippedShipmentsGetNothing(): void
     {
         self::assertSame('', trim($this->render(new GlsShipment(new GlsShippingMethod('foxpost_parcel_locker')))));
@@ -161,14 +215,14 @@ final class AdminTemplateRenderTest extends TestCase
         }
     }
 
-    private function ship(GlsShipment $shipment, bool $apiEnabled = true): Crawler
+    private function ship(GlsShipment $shipment, bool $apiEnabled = true, string $labelFormat = 'A4_2x2'): Crawler
     {
-        return new Crawler($this->render($shipment, $apiEnabled));
+        return new Crawler($this->render($shipment, $apiEnabled, $labelFormat));
     }
 
-    private function render(GlsShipment $shipment, bool $apiEnabled = true): string
+    private function render(GlsShipment $shipment, bool $apiEnabled = true, string $labelFormat = 'A4_2x2'): string
     {
-        return $this->twig($apiEnabled)->render(self::SHIP, ['hookable_metadata' => ['context' => ['resource' => $shipment, 'attributes' => '']]]);
+        return $this->twig($apiEnabled, $labelFormat)->render(self::SHIP, ['hookable_metadata' => ['context' => ['resource' => $shipment, 'attributes' => '']]]);
     }
 
     private function shipment(?\Sylius\Component\Core\Model\Order $order = null): GlsShipment
@@ -193,7 +247,7 @@ final class AdminTemplateRenderTest extends TestCase
         return $parcel;
     }
 
-    private function twig(bool $apiEnabled): Environment
+    private function twig(bool $apiEnabled, string $labelFormat = 'A4_2x2'): Environment
     {
         $catalog = new DeliveryPointCatalog(new MockHttpClient(), new ArrayAdapter(), new RecordingLogger());
         $factory = new Psr17Factory();
@@ -203,7 +257,7 @@ final class AdminTemplateRenderTest extends TestCase
         $repository = $this->createStub(GlsParcelRepository::class);
         $repository->method('findOneByShipment')->willReturnCallback(fn (): ?GlsParcel => $this->parcel);
         $payload = new GlsParcelPayloadFactory(new StreetSplitter(), $catalog, new CodPolicy(), [], false, false);
-        $runtime = new GlsRuntime($catalog, new PickupPointCashCheck($catalog), new CodPolicy(), 'HU', $access, $repository, $payload, new ParcelEstimator());
+        $runtime = new GlsRuntime($catalog, new PickupPointCashCheck($catalog), new CodPolicy(), 'HU', $access, $repository, $payload, new ParcelEstimator(), labelFormat: $labelFormat);
 
         $loader = new FilesystemLoader();
         $loader->addPath(\dirname(__DIR__, 3) . '/templates', 'CodeConjureSyliusGlsPlugin');

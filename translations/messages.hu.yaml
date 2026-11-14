@@ -13,6 +13,18 @@ codeconjure:
             label: 'Címke'
             cancel: 'Sztornó'
             bulk_label: 'Címkék nyomtatása'
+            print_position:
+                label: 'Kezdés a lapon'
+                A4_2x2:
+                    1: '1. – bal felső'
+                    2: '2. – jobb felső'
+                    3: '3. – bal alsó'
+                    4: '4. – jobb alsó'
+                A4_4x1:
+                    1: '1. – legfelső'
+                    2: '2. – felülről a második'
+                    3: '3. – felülről a harmadik'
+                    4: '4. – legalsó'
             bulk_cancel: 'Sztornó'
             cancel_confirm: 'Biztosan sztornózod a GLS csomagot?'
             register: 'GLS feladás'
