@@ -27,6 +27,8 @@ final class GlsExtension extends AbstractExtension
             new TwigFunction('gls_parcel_for_shipment', [GlsRuntime::class, 'parcelForShipment']),
             new TwigFunction('gls_parcel_preview', [GlsRuntime::class, 'parcelPreview']),
             new TwigFunction('gls_tracking_url', [GlsRuntime::class, 'trackingUrl']),
+            new TwigFunction('gls_cod_fee', [GlsRuntime::class, 'codFee']),
+            new TwigFunction('gls_parcel_estimate', [GlsRuntime::class, 'parcelEstimate']),
         ];
     }
 }

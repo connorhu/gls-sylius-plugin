@@ -76,7 +76,7 @@ codeconjure_gls:
         payment_method_codes: [cash_on_delivery]   # a bolt utánvétes módjainak kódja
         max_amount: 50000000    # fillérben: 500 000 Ft (a GLS maxCodAmount-ja)
         international: false    # külföldre csak, ha a GLS-szerződés adja
-    # A termékméretre rászámolt csomagolási ráhagyás (a díjbecsléshez).
+    # A termékméretre rászámolt csomagolási ráhagyás (a díjszámításhoz, l. 11.).
     packaging:
         allowance_mm: 0
         allowance_g: 0
@@ -293,6 +293,84 @@ tulajdonosa):
 A `flock -n` az átfedő futások ellen kell. API nélküli módban a parancs
 sikeresen, lekérdezés nélkül lép ki („the MyGLS API is not configured"), tehát
 a bejegyzés a hozzáférés előtt is a helyén lehet.
+
+## 11. Díjszámítás
+
+A `gls` shipping calculator a GLS saját kalkulátorának képletével számol,
+csomagonként:
+
+```
+alapár[méret]               külföldön az ország sora; belföldön GO-val a GO-egységár
++ kézbesítési felár[méret]  a mód saját táblája (automata / csomagpont / házhoz)
++ feladási felár[méret]     automatából / csomagponton / futárral
++ értesítések               ha a plugin küldi őket (notifications.email / .sms)
+```
+
+Ehhez jön szállítmányonként egyszer az **utánvét díja**, ha a rendelés
+fizetési módja utánvét (`cod.payment_method_codes`). A sáv a beszedendő
+összegből jön: tételek + szállítás + az alacsonyabb díj. Ha ez a sáv-határ
+fölé megy, a magasabb díj jár. A Sylius a `select_payment` átmenetnél
+újrafuttatja az order processor-láncot, és így a fizetési mód váltása a
+szállítási díjat is újraszámolja.
+
+**Ha a host a fizetési módra kezelési díjat számol** (saját order
+processorral), GLS-szállítmánynál azt ki kell hagynia, különben a vevő kétszer
+fizet utánvétdíjat. A feltétel: a szállítmány módjának calculatora
+`GlsShippingCalculator::TYPE`.
+
+### A díjtábla
+
+Az admin szállítási-mód űrlapján a „GLS díjképlet (méret szerint)" calculator
+csatornánként egy táblát kér, forintban (a tárolás fillérben). Fixture-ben vagy
+kézzel:
+
+```yaml
+calculator:
+    type: gls
+    configuration:
+        MET_HUF:
+            base:     { XS: 159000, S: 159000, M: 159000, L: 259000, XL: 259000 }
+            delivery: { XS: 0, S: 0, M: 0, L: 0, XL: 0 }   # automata (dtl)
+            dispatch: { XS: 0, S: 0, M: 0, L: 0, XL: 0 }   # automatából (ptl)
+            go_unit_price: ~
+            email_fee: 6000
+            sms_fee: 12000
+            cod_fee: 60000
+            cod_fee_high: 119000
+            cod_threshold: 3000000
+            country_base:                                   # külföld, opcionális
+                DE: { XS: 779000, S: 1189000, M: 1519000, L: 1889000, XL: 2329000 }
+```
+
+### A csomagméret
+
+A tételek a Sylius-változat szélességéből, magasságából és mélységéből
+(**mm**) és súlyából (**g**) állnak össze. Egy csomag a tételek egymásra
+rakva: a legvékonyabb oldaluk összeadódik, a másik kettőből a legnagyobb
+számít. Ehhez jön a ráhagyás (`packaging.allowance_mm` minden oldalhoz,
+`packaging.allowance_g` csomagonként). Ami egy csomagba nem fér, több csomag
+lesz (first-fit decreasing), és a díj csomagonként jár. A hiányzó méret 0-nak
+számít; a teljes adatot a hostnak kell biztosítania.
+
+A méretosztályok (belföld, a GLS `parcelLimits.hu` értékei):
+
+| | XS | S | M | L | XL |
+|---|---|---|---|---|---|
+| automata (rekesz, cm) | 7,5×18×60 | 7,5×43×60 | 17×43×60 | 36×43×60 | 74×43×60 |
+| csomagpont / házhoz (leghosszabb + legrövidebb oldal) | 35 cm | 50 cm | 65 cm | 80 cm | 300 cm-es körméretig, max. 200×80×60 cm |
+
+Mindenhol legfeljebb 40 kg. **Ha egy tétel önmagában sem fér** a mód
+legnagyobb osztályába, a mód a pénztárban nem választható (a Sylius
+eligibility-ellenőrzője).
+
+### Twig
+
+- `gls_cod_fee(order)`: mennyi utánvét-díj kerül a szállítási díjba, ha a vevő
+  utánvétet választ (fillér), vagy `null`, ha a szállítmány nem a `gls`
+  calculatorral számol. A fizetési mód kártyáján érdemes ezt mutatni a
+  kezelési díj helyett.
+- `gls_parcel_estimate(shipment)`: `{count, weight}` (a súly kg-ban). Az admin
+  feladó-űrlapja ezzel tölti elő a mezőket.
 
 ## API-t hívó kód a pluginban és a hostban
 

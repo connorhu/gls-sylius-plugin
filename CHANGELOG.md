@@ -5,7 +5,26 @@ sor azt jelenti, hogy a nyilvános API még mozog: egy `0.y.z` → `0.(y+1).0`
 váltás törő változást is tartalmazhat, a javító kiadások viszont
 visszafelé kompatibilisek.
 
-## [Nem kiadott]
+## [0.6.0] – 2026-11-14
+
+A díjszámítás a GLS kalkulátorának képletével (bolt-issue #260).
+
+### Hozzáadva
+
+- `gls` shipping calculator (`Shipping\GlsShippingCalculator`, `GlsRateTable`):
+  alapár + kézbesítési felár + feladási felár + értesítések méretosztályonként,
+  csomagonként; GLS GO-egységár belföldön; országonkénti alapár külföldre;
+  a sávos utánvét-díj a szállítási díjban, ha a fizetési mód utánvét. Minden ár
+  a mód konfigurációjából jön, csatornánként, fillérben.
+- Admin-űrlap a díjtáblához (`Form\Type\ChannelBasedGlsCalculatorConfigurationType`),
+  forintban szerkeszthető; az országonkénti alapár soronként egy ország.
+- `Packaging\ParcelEstimator`, `SizeLimits`, `SizeClass`: a csomagméret a tételek
+  egymásra rakva, plusz a ráhagyás; a több csomagra bontás first-fit decreasing;
+  a méretosztályok a GLS `parcelLimits.hu` értékei.
+- `Shipping\GlsShippingMethodEligibilityChecker`: ha egy tétel a mód legnagyobb
+  osztályába sem fér (vagy 40 kg fölött van), a GLS-mód nem választható.
+- Twig: `gls_cod_fee(order)`, `gls_parcel_estimate(shipment)`; az admin
+  feladó-űrlapja a becsült súllyal és darabszámmal töltődik elő.
 
 ## [0.5.0] – 2026-11-12
 
@@ -129,7 +148,7 @@ A plugin váza, üzleti funkció nélkül.
 - Kapuk: PHPUnit, PHPStan level 9, ECS — GitHub Actionsön (PHP 8.4/8.5 ×
   Sylius 2.1/2.2), plusz `--prefer-lowest` tesztfutás.
 
-[Nem kiadott]: https://github.com/connorhu/gls-sylius-plugin/compare/0.5.0...main
+[0.6.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.6.0
 [0.5.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.5.0
 [0.4.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.4.0
 [0.3.0]: https://github.com/connorhu/gls-sylius-plugin/releases/tag/0.3.0

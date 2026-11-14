@@ -10,13 +10,19 @@ use CodeConjure\SyliusGlsPlugin\Command\GlsTrackingSyncCommand;
 use CodeConjure\SyliusGlsPlugin\Controller\GlsParcelController;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
+use CodeConjure\SyliusGlsPlugin\Form\Type\ChannelBasedGlsCalculatorConfigurationType;
+use CodeConjure\SyliusGlsPlugin\Form\Type\GlsCalculatorConfigurationType;
+use CodeConjure\SyliusGlsPlugin\Form\Type\GlsSizePricesType;
 use CodeConjure\SyliusGlsPlugin\Menu\AdminMenuListener;
+use CodeConjure\SyliusGlsPlugin\Packaging\ParcelEstimator;
 use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelPayloadFactory;
 use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelService;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Pickup\PickupPointValidator;
 use CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository;
+use CodeConjure\SyliusGlsPlugin\Shipping\GlsShippingCalculator;
+use CodeConjure\SyliusGlsPlugin\Shipping\GlsShippingMethodEligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Tracking\GlsTrackingSyncService;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
@@ -109,6 +115,8 @@ return static function (ContainerConfigurator $container): void {
             service(ApiAccess::class),
             service(GlsParcelRepository::class),
             service(GlsParcelPayloadFactory::class),
+            service(ParcelEstimator::class),
+            service(GlsShippingCalculator::class),
         ])
         ->tag('twig.runtime');
 
@@ -172,4 +180,35 @@ return static function (ContainerConfigurator $container): void {
     $services->set(GlsTrackingSyncCommand::class)
         ->args([service(GlsTrackingSyncService::class)])
         ->tag('console.command');
+
+    // --- A díjszámítás (#260) ---
+
+    $services->set(ParcelEstimator::class)
+        ->args([
+            param('codeconjure_gls.packaging.allowance_mm'),
+            param('codeconjure_gls.packaging.allowance_g'),
+        ]);
+
+    $services->set(GlsShippingCalculator::class)
+        ->args([
+            service(ParcelEstimator::class),
+            service(CodPolicy::class),
+            param('codeconjure_gls.notifications.email'),
+            param('codeconjure_gls.notifications.sms'),
+        ])
+        ->tag('sylius.shipping_calculator', [
+            'calculator' => GlsShippingCalculator::TYPE,
+            'label' => 'codeconjure.gls.form.calculator.label',
+            'form_type' => ChannelBasedGlsCalculatorConfigurationType::class,
+        ]);
+
+    // A Sylius összetett eligibility-ellenőrzője a címkéből gyűjti a
+    // tagjait: a nem férő kosárnál a GLS-mód a 2. lépésen meg sem jelenik.
+    $services->set(GlsShippingMethodEligibilityChecker::class)
+        ->args([service(ParcelEstimator::class)])
+        ->tag('sylius.shipping_method_eligibility_checker');
+
+    foreach ([GlsSizePricesType::class, GlsCalculatorConfigurationType::class, ChannelBasedGlsCalculatorConfigurationType::class] as $formType) {
+        $services->set($formType)->tag('form.type');
+    }
 };
