@@ -5,6 +5,8 @@
    rajzol — más szállítmánynál üres, és a közös sablon a többi szállítóra,
    végül a Sylius alapgombjára esik vissza.
 
+   A súly és a darabszám a kosár becsült csomagjaiból töltődik elő (#260).
+
    API-módban: feladás (súly, darabszám) → címke → átadás, közben sztornó.
    API nélkül (#253): a GLS felületére átviendő adatok másolható formában, és
    a nyomkövetési szám kézi rögzítése, amitől a szállítmány kiszállítva. #}
@@ -16,6 +18,8 @@
     {% set parcel = gls_parcel_for_shipment(shipment) %}
     {% set status = parcel is not null ? parcel.internalStatus : null %}
     {% set token = csrf_token('gls_parcel') %}
+    {# A kosár becsült csomagjai (#260) — ugyanabból számolódott a díj. #}
+    {% set estimate = gls_parcel_estimate(shipment) %}
 
     <div {{ attributes }} class="gls-ship" data-test-gls-ship>
         {% if parcel is not null and parcel.lastApiError %}
@@ -26,7 +30,7 @@
             {% if status is null or status.isRegistrable %}
                 <form method="post" action="{{ path('codeconjure_gls_admin_parcel_register', {shipmentId: shipment.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
                     <input type="hidden" name="_csrf_token" value="{{ token }}">
-                    {{ gls.size_fields() }}
+                    {{ gls.size_fields(estimate) }}
                     <button type="submit" class="btn" {{ sylius_test_html_attribute('shipment-ship-button') }}>
                         {{ ux_icon('tabler:truck') }} {{ 'codeconjure.gls.ui.register'|trans }}
                     </button>
@@ -87,7 +91,7 @@
                     {{ 'codeconjure.gls.ui.tracking_number'|trans }}
                     <input type="text" name="tracking_number" class="form-control form-control-sm" required inputmode="numeric" data-test-gls-tracking-number>
                 </label>
-                {{ gls.size_fields() }}
+                {{ gls.size_fields(estimate) }}
                 <button type="submit" class="btn" {{ sylius_test_html_attribute('shipment-ship-button') }}>
                     {{ ux_icon('tabler:truck') }} {{ 'codeconjure.gls.ui.manual_hand_over'|trans }}
                 </button>
@@ -96,14 +100,14 @@
     </div>
 {% endif %}
 
-{% macro size_fields() %}
+{% macro size_fields(estimate) %}
     <label class="form-label mb-0">
         {{ 'codeconjure.gls.ui.weight'|trans }}
-        <input type="text" name="weight" class="form-control form-control-sm" inputmode="decimal" size="5">
+        <input type="text" name="weight" class="form-control form-control-sm" inputmode="decimal" size="5"{% if estimate is not null and estimate.weight > 0 %} value="{{ estimate.weight }}"{% endif %}>
     </label>
     <label class="form-label mb-0">
         {{ 'codeconjure.gls.ui.count'|trans }}
-        <input type="number" name="count" class="form-control form-control-sm" value="1" min="1" max="99">
+        <input type="number" name="count" class="form-control form-control-sm" value="{{ estimate is not null ? estimate.count : 1 }}" min="1" max="99">
     </label>
 {% endmacro %}
 

@@ -65,6 +65,17 @@ final class TranslationNamespaceTest extends TestCase
      * Minden sablon szó szerinti kulcsa létezik (a fajtából vagy állapotból
      * képzett kulcsokat a két külön teszt méri).
      */
+    /** A `gls` calculator címkéje és az admin-űrlap mezői (#260). */
+    public function testTheCalculatorFormIsTranslated(): void
+    {
+        $keys = self::keys('messages', 'hu');
+        $fields = ['label', 'base', 'delivery', 'dispatch', 'go_unit_price', 'go_unit_price_help', 'email_fee', 'sms_fee', 'cod_fee', 'cod_fee_high', 'cod_threshold', 'country_base', 'country_base_help', 'country_base_invalid'];
+
+        foreach ($fields as $field) {
+            self::assertContains('codeconjure.gls.form.calculator.' . $field, $keys);
+        }
+    }
+
     public function testEveryLiteralKeyInTheTemplatesExists(): void
     {
         $keys = self::keys('messages', 'hu');

@@ -12,6 +12,7 @@ use CodeConjure\SyliusGlsPlugin\Controller\GlsParcelController;
 use CodeConjure\SyliusGlsPlugin\Entity\GlsParcel;
 use CodeConjure\SyliusGlsPlugin\Entity\GlsParcelStatus;
 use CodeConjure\SyliusGlsPlugin\Model\GlsDeliveryKind;
+use CodeConjure\SyliusGlsPlugin\Packaging\ParcelEstimator;
 use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelPayloadFactory;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository;
@@ -20,6 +21,7 @@ use CodeConjure\SyliusGlsPlugin\Tests\Support\GlsShipment;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\GlsShippingMethod;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\OrderFactory;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\RecordingLogger;
+use CodeConjure\SyliusGlsPlugin\Tests\Support\ShipmentBuilder;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsExtension;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -109,6 +111,32 @@ final class AdminTemplateRenderTest extends TestCase
         self::assertStringContainsString('12990 Ft', $this->ship($this->shipment($order), apiEnabled: false)->filter('[data-test-gls-manual]')->text());
     }
 
+    /**
+     * A súly és a darabszám a kosár becsült csomagjaiból töltődik elő (#260)
+     * — ugyanabból, amivel a díj számolódott; az admin felülírhatja.
+     */
+    public function testTheSizeFieldsArePrefilledFromTheEstimate(): void
+    {
+        $shipment = ShipmentBuilder::shipment()->kind(GlsDeliveryKind::HomeDelivery)->item(200, 50, 300, 15_000, quantity: 3)->build();
+        $shipment->setState(ShipmentInterface::STATE_READY);
+        (new \ReflectionProperty(\Sylius\Component\Shipping\Model\Shipment::class, 'id'))->setValue($shipment, 8);
+
+        foreach ([true, false] as $apiEnabled) {
+            $page = $this->ship($shipment, apiEnabled: $apiEnabled);
+
+            self::assertSame('45', $page->filter('input[name="weight"]')->attr('value'));
+            self::assertSame('2', $page->filter('input[name="count"]')->attr('value'));
+        }
+    }
+
+    public function testWithoutAnEstimateTheSizeFieldsKeepTheirDefaults(): void
+    {
+        $page = $this->ship($this->shipment());
+
+        self::assertSame('', (string) $page->filter('input[name="weight"]')->attr('value'));
+        self::assertSame('1', $page->filter('input[name="count"]')->attr('value'));
+    }
+
     public function testOtherCarriersAndShippedShipmentsGetNothing(): void
     {
         self::assertSame('', trim($this->render(new GlsShipment(new GlsShippingMethod('foxpost_parcel_locker')))));
@@ -175,7 +203,7 @@ final class AdminTemplateRenderTest extends TestCase
         $repository = $this->createStub(GlsParcelRepository::class);
         $repository->method('findOneByShipment')->willReturnCallback(fn (): ?GlsParcel => $this->parcel);
         $payload = new GlsParcelPayloadFactory(new StreetSplitter(), $catalog, new CodPolicy(), [], false, false);
-        $runtime = new GlsRuntime($catalog, new PickupPointCashCheck($catalog), new CodPolicy(), 'HU', $access, $repository, $payload);
+        $runtime = new GlsRuntime($catalog, new PickupPointCashCheck($catalog), new CodPolicy(), 'HU', $access, $repository, $payload, new ParcelEstimator());
 
         $loader = new FilesystemLoader();
         $loader->addPath(\dirname(__DIR__, 3) . '/templates', 'CodeConjureSyliusGlsPlugin');

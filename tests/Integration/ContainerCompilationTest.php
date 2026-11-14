@@ -12,9 +12,15 @@ use CodeConjure\SyliusGlsPlugin\CodeConjureSyliusGlsPlugin;
 use CodeConjure\SyliusGlsPlugin\DependencyInjection\CodeConjureSyliusGlsExtension;
 use CodeConjure\SyliusGlsPlugin\Eligibility\EligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Form\Extension\CheckoutShipmentTypeExtension;
+use CodeConjure\SyliusGlsPlugin\Form\Type\ChannelBasedGlsCalculatorConfigurationType;
+use CodeConjure\SyliusGlsPlugin\Model\GlsDeliveryKind;
+use CodeConjure\SyliusGlsPlugin\Packaging\ParcelEstimator;
 use CodeConjure\SyliusGlsPlugin\Payment\CodPaymentMethodsResolver;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
+use CodeConjure\SyliusGlsPlugin\Shipping\GlsShippingCalculator;
+use CodeConjure\SyliusGlsPlugin\Shipping\GlsShippingMethodEligibilityChecker;
 use CodeConjure\SyliusGlsPlugin\Tests\Support\EmptyPaymentMethodsResolver;
+use CodeConjure\SyliusGlsPlugin\Tests\Support\ShipmentBuilder;
 use CodeConjure\SyliusGlsPlugin\Twig\GlsRuntime;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -254,6 +260,33 @@ final class ContainerCompilationTest extends TestCase
 
         self::assertTrue($container->getDefinition(\CodeConjure\SyliusGlsPlugin\Command\GlsTrackingSyncCommand::class)->hasTag('console.command'));
         self::assertSame([['channel' => 'gls']], $container->getDefinition(\CodeConjure\SyliusGlsPlugin\Tracking\GlsTrackingSyncService::class)->getTag('monolog.logger'));
+    }
+
+    /**
+     * A díjszámítás (#260): a `gls` calculator a Sylius címkéjével és
+     * űrlapjával regisztrált, a méret-ellenőrző a Sylius összetett
+     * eligibility-ellenőrzőjének tagja, és mindkettő a ráhagyást kapja.
+     */
+    public function testTheShippingCalculatorAndTheEligibilityCheckerAreTagged(): void
+    {
+        $container = $this->builder(['packaging' => ['allowance_mm' => 5, 'allowance_g' => 80], 'notifications' => ['email' => true]]);
+
+        self::assertSame(
+            [['calculator' => 'gls', 'label' => 'codeconjure.gls.form.calculator.label', 'form_type' => ChannelBasedGlsCalculatorConfigurationType::class]],
+            $container->getDefinition(GlsShippingCalculator::class)->getTag('sylius.shipping_calculator'),
+        );
+        self::assertTrue($container->getDefinition(GlsShippingMethodEligibilityChecker::class)->hasTag('sylius.shipping_method_eligibility_checker'));
+        self::assertTrue($container->getDefinition(ChannelBasedGlsCalculatorConfigurationType::class)->hasTag('form.type'));
+
+        $dumped = $this->dumpedContainer(['packaging' => ['allowance_mm' => 5, 'allowance_g' => 80], 'notifications' => ['email' => true]]);
+        $estimator = $dumped->get(ParcelEstimator::class);
+        self::assertInstanceOf(ParcelEstimator::class, $estimator);
+
+        $parcels = $estimator->estimate(ShipmentBuilder::shipment()->item(10, 100, 100, 200)->build(), GlsDeliveryKind::ParcelLocker);
+        self::assertNotNull($parcels);
+        self::assertSame([15.0, 105.0, 105.0], $parcels[0]->dimensions->sorted());
+        self::assertSame(280.0, $parcels[0]->dimensions->weight);
+        self::assertInstanceOf(GlsShippingCalculator::class, $dumped->get(GlsShippingCalculator::class));
     }
 
     /** A workflow, a resource és a grid a megfelelő extensionnek megy. */

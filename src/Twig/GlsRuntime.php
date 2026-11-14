@@ -10,10 +10,13 @@ use CodeConjure\SyliusGlsPlugin\Cod\PickupPointCashCheck;
 use CodeConjure\SyliusGlsPlugin\Entity\GlsParcel;
 use CodeConjure\SyliusGlsPlugin\Model\GlsDeliveryKind;
 use CodeConjure\SyliusGlsPlugin\Model\GlsShipmentInterface;
+use CodeConjure\SyliusGlsPlugin\Packaging\ParcelEstimator;
 use CodeConjure\SyliusGlsPlugin\Parcel\GlsParcelPayloadFactory;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPoint;
 use CodeConjure\SyliusGlsPlugin\Pickup\DeliveryPointCatalog;
 use CodeConjure\SyliusGlsPlugin\Repository\GlsParcelRepository;
+use CodeConjure\SyliusGlsPlugin\Shipping\GlsShippingCalculator;
+use Sylius\Component\Core\Exception\MissingChannelConfigurationException;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\ShipmentInterface;
 use Sylius\Component\Payment\Model\PaymentMethodInterface;
@@ -37,6 +40,8 @@ final readonly class GlsRuntime implements RuntimeExtensionInterface
         private ?ApiAccess $apiAccess = null,
         private ?GlsParcelRepository $parcelRepository = null,
         private ?GlsParcelPayloadFactory $payloadFactory = null,
+        private ?ParcelEstimator $estimator = null,
+        private ?GlsShippingCalculator $calculator = null,
     ) {
     }
 
@@ -77,6 +82,65 @@ final readonly class GlsRuntime implements RuntimeExtensionInterface
     public static function trackingUrl(?string $parcelNumber): ?string
     {
         return $parcelNumber === null || trim($parcelNumber) === '' ? null : \sprintf(self::TRACKING_URL, rawurlencode(trim($parcelNumber)));
+    }
+
+    /**
+     * Mennyi utánvét-díj kerül a szállítási díjba, ha a vevő utánvétet
+     * választ (#260) — a rendelés `gls` calculatoros szállítmányából; null,
+     * ha nincs ilyen (más szállító, vagy a mód nem a GLS díjképletével
+     * számol, és akkor az utánvét díja a fizetési mód kezelési díja marad).
+     */
+    public function codFee(mixed $order): ?int
+    {
+        if (!$order instanceof OrderInterface || $this->calculator === null) {
+            return null;
+        }
+
+        foreach ($order->getShipments() as $shipment) {
+            $method = $shipment->getMethod();
+
+            if ($method === null || $method->getCalculator() !== GlsShippingCalculator::TYPE) {
+                continue;
+            }
+
+            try {
+                return $this->calculator->cashOnDeliveryFee($shipment, $method->getConfiguration());
+            } catch (MissingChannelConfigurationException) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A szállítmány becsült csomagjai az admin feladó-űrlapjának (#260):
+     * darabszám és az össztömeg kg-ban; null, ha a szállítmány nem GLS-é,
+     * vagy a mód egyik méretosztályába sem fér.
+     *
+     * @return array{count: int, weight: float}|null
+     */
+    public function parcelEstimate(mixed $shipment): ?array
+    {
+        if (!$shipment instanceof ShipmentInterface || $this->estimator === null) {
+            return null;
+        }
+
+        $kind = GlsDeliveryKind::of($shipment);
+
+        if ($kind === null) {
+            return null;
+        }
+
+        $parcels = $this->estimator->estimate($shipment, $kind);
+
+        if ($parcels === null) {
+            return null;
+        }
+
+        $grams = array_sum(array_map(static fn ($parcel): float => $parcel->dimensions->weight, $parcels));
+
+        return ['count' => \count($parcels), 'weight' => round($grams / 1000, 3)];
     }
 
     public function pickupPoint(?string $id): ?DeliveryPoint

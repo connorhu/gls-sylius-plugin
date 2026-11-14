@@ -7,6 +7,25 @@ visszafelé kompatibilisek.
 
 ## [Nem kiadott]
 
+A díjszámítás a GLS kalkulátorának képletével (bolt-issue #260).
+
+### Hozzáadva
+
+- `gls` shipping calculator (`Shipping\GlsShippingCalculator`, `GlsRateTable`):
+  alapár + kézbesítési felár + feladási felár + értesítések méretosztályonként,
+  csomagonként; GLS GO-egységár belföldön; országonkénti alapár külföldre;
+  a sávos utánvét-díj a szállítási díjban, ha a fizetési mód utánvét. Minden ár
+  a mód konfigurációjából jön, csatornánként, fillérben.
+- Admin-űrlap a díjtáblához (`Form\Type\ChannelBasedGlsCalculatorConfigurationType`),
+  forintban szerkeszthető; az országonkénti alapár soronként egy ország.
+- `Packaging\ParcelEstimator`, `SizeLimits`, `SizeClass`: a csomagméret a tételek
+  egymásra rakva, plusz a ráhagyás; a több csomagra bontás first-fit decreasing;
+  a méretosztályok a GLS `parcelLimits.hu` értékei.
+- `Shipping\GlsShippingMethodEligibilityChecker`: ha egy tétel a mód legnagyobb
+  osztályába sem fér (vagy 40 kg fölött van), a GLS-mód nem választható.
+- Twig: `gls_cod_fee(order)`, `gls_parcel_estimate(shipment)`; az admin
+  feladó-űrlapja a becsült súllyal és darabszámmal töltődik elő.
+
 ## [0.5.0] – 2026-11-12
 
 A nyomkövetés-szinkron (bolt-issue #258).
